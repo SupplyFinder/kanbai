@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- The orchestrator attaches the product repos from `repos.md` itself when it starts (and on each daily
+  check), so branch protection, PR status and PR closing work without attaching them by hand.
+- Ticket sessions are told in their first message which repos they may attach (push for coding, read
+  for planning and review). Auto mode judges `add_repo` from the session's own messages, so an attach
+  was sometimes refused; a coding session now pauses instead of retrying when that happens.
+- The hourly check's message names the KanbAI board (it said "AI tickets board").
+- Setup asks whether to make the chat skill available to the whole organisation (published as a
+  `kanbai` plugin) or only to you (a zip to upload as a personal skill).
+- Board: with no tickets yet, the stage columns still show, with the empty-board message below them.
 - The backup repo is optional: leave `backups.repo` empty to keep the board copy only (30 days).
   Setup asks; Health no longer reports a missing repo when none is configured.
 - Orchestrator restart only takes over scheduled checks of this board's previous orchestrator.

@@ -18,7 +18,10 @@ Read `ticket_state/T-n`, `approvals/T-n` and `approval_votes`. Continue only if 
 - Read `plan`, `brief`, `scope`, `branch`, and the ticket's attachments (see planning.md step 1).
 - Attach every repo in `scope` with push access (`add_repo` with `access: "push"`, clone, then
   `register_repo_root`, one at a time), plus, read-only, each repo its `repos.md` section lists under
-  "Depends on" (unless already in scope).
+  "Depends on" (unless already in scope). These are the repos the orchestrator named in your first
+  message ("Attach with push access: …"); if `scope` asks for one it did not name, or an attach is refused,
+  do not retry or work around it: status `AI paused – needs decision`, `note` = which repo and the refusal,
+  message the orchestrator, end.
 - In each repo in scope: if `origin/<branch>` exists, check it out and continue from its commits
   (`git log --oneline origin/<target>..HEAD`); otherwise create `<branch>` from a freshly fetched
   `origin/<target>`.

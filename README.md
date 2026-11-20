@@ -67,8 +67,9 @@ Draft → With Claude (planning) → Needs info ↔ author answers → Plan read
    on a branch before any PR is opened.
 
 Optional: to let anyone create tickets from any Claude chat ("create a ticket in the kanban from our
-discussion"), upload the skill as an organisation skill: zip `.claude/skills/kanbai` together with
-`kanbai/config.yml` and upload it in claude.ai.
+discussion"), `/kanbai setup` asks whether to set it up for the whole organisation (it publishes a `kanbai` plugin to
+your organisation's library; you approve the upload) or only for you (a zip to upload as a personal skill). Without that tool: zip `.claude/skills/kanbai`
+together with `kanbai/config.yml` and upload it in claude.ai as an organisation skill.
 
 ## Daily use
 - **New ticket** on the board (or from a Claude chat, saved as a draft), then **Submit to Claude**.

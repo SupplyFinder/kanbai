@@ -44,8 +44,15 @@ remember of earlier turns.
    `create_trigger`, bound to this session, `CRON_TZ=<timezone> <schedules.daily>`,
    prompt `Daily reconcile of the KanbAI board.`, initiation `human_schedule`.
    If `schedules.hourly` is set, also the hourly check if none exists for this session: `create_trigger`,
-   bound to this session, `CRON_TZ=<timezone> <schedules.hourly>`, prompt `Hourly reconcile of the AI
-   tickets board.`, initiation `human_schedule`. It catches anything a missed wake left waiting.
+   bound to this session, `CRON_TZ=<timezone> <schedules.hourly>`, prompt `Hourly reconcile of the KanbAI
+   board.`, initiation `human_schedule`. It catches anything a missed wake left waiting.
+3a. Product repos: the session starts with only the company repo in its GitHub scope. For every repo in
+   `repos.md` (never one in `forbidden_repos`), `add_repo` with `access: "push"` (closing a PR is a GitHub API
+   write; the orchestrator never pushes code), one at a time, so branch protection, PR status and PR
+   closing work. No clone is needed: the orchestrator only uses the GitHub tools (if `add_repo` asks for a
+   clone, use `--depth 1` into `/home/user/<name>`). A repo that cannot be
+   attached → a Health problem ("<repo> could not be attached: <reason>"), never a reason to stop. Repeat
+   on each daily reconcile for repos added to `repos.md` since.
 4. Branch protection: for every repo in `repos.md`, `list_branches` and read whether its PR target and
    release branch are `protected` (one check when they are the same branch). Repeat on each daily reconcile
    and on a Health check.
@@ -269,7 +276,11 @@ the owner or an approver can approve. You never write `approvals/` or `approval_
    `https://github.com/<company_repo>` (so the session loads the permission rules, this skill and the
    company files), title `T-n planning` / `T-n coding` / `T-n review`, tags `[<session_tag>]`, and prompt:
    `/kanbai planning T-n` (or `coding`, `review`) followed by lines `board: <board url>` and
-   `orchestrator: <your session id>`.
+   `orchestrator: <your session id>`. For coding (and a Continue of coding) add the lines
+   `Attach with push access (add_repo, access "push"): <owner/name of each repo in scope>` and, if any,
+   `Attach read-only: <owner/name of each "Depends on" repo not in scope>`; for planning and review,
+   `Attach read-only: <owner/name of every repo in repos.md>`. The session's permission check only sees
+   its own messages, so the repos it may attach must be named there; never list a `forbidden_repos` one.
 3. Write to `ticket_state`: `plan_session_id` / `code_session_id` / `review_session_id`, status
    (`Investigating` / `Coding` / `Reviewing`; for review also `review_state: "running"`),
    `status_at`, `deadline_at` = now + `cap_minutes`, and `usage.<planning|coding|review>` = `{start: <reading>}`
