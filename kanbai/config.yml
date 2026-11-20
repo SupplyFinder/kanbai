@@ -20,7 +20,7 @@ slack:
   channel: ""                  # channel id; bot token in the SLACK_BOT_TOKEN environment variable
 
 backups:
-  repo: ""                     # private owner/repo for the daily backup
+  repo: ""                     # optional private owner/repo for a permanent copy; empty = board only (30 days)
   branch: daily
 
 screenshots:

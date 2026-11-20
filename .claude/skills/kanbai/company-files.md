@@ -19,8 +19,8 @@ schedules:
 slack:
   enabled: true | false
   channel: <channel id>                      # token in the SLACK_BOT_TOKEN environment variable
-backups:
-  repo: <owner/repo>                         # private repo for the daily backup
+backups:                                     # optional: empty repo = board copy only (30 days)
+  repo: <owner/repo>                         # private repo for a permanent copy of the daily backup
   branch: daily
 screenshots:
   enabled: true | false

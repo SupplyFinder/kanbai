@@ -46,7 +46,8 @@ Draft → With Claude (planning) → Needs info ↔ author answers → Plan read
 
 ## Set up (about 30 minutes)
 1. Click **Use this template** → create your company repo (private), e.g. `acme-kanbai`.
-2. Create an empty **private** repo for backups, e.g. `acme-kanbai-backup`.
+2. Optional: create an empty **private** repo for backups, e.g. `acme-kanbai-backup`. Without it, backups
+   are kept on the board for 30 days only; with it, every day is also kept in git for good.
 3. In Claude Code on the web, start a **new session with your company repo selected**. The session loads
    the KanbAI skill and permission rules from the repo; there is nothing to upload.
 4. Type **`/kanbai setup`**. It:

@@ -791,7 +791,7 @@
   function renderBackups() {
     const body = $('k-body'); const foot = $('k-foot');
     if (!bkIndex.length) {
-      body.replaceChildren(h('div', { class: 'callout warn' }, h('strong', null, 'No backups yet.'), h('span', null, 'Claude makes one every day during its 6:47 check, once the backup step is in the skill. Click "Run a check now" in the Health panel to make the first one.')));
+      body.replaceChildren(h('div', { class: 'callout warn' }, h('strong', null, 'No backups yet.'), h('span', null, 'Claude makes one every day during its daily check. Click "Run a check now" in the Health panel to make the first one.')));
       foot.replaceChildren(h('button', { type: 'button', 'data-close': true }, 'Close')); return;
     }
     const rows = bkRows(bkDay);
@@ -814,9 +814,12 @@
     body.replaceChildren(h('div', { class: 'bk' }, days, h('div', { style: 'display:grid;gap:12px;min-width:0' },
       h('div', { class: 'row-between' }, h('strong', null, 'Backup of ' + (bkDay.label || fmtDay(bkDay.date || bkDay.id))),
         h('span', { class: 'empty-col' }, counts.changed + ' changed · ' + counts.deleted + ' deleted · ' + counts.new + ' created after')),
+      bkBoardOnly() ? h('div', { class: 'callout' }, 'Board copy only: backups are kept here for 30 days. For a permanent copy, set a private GitHub repo under backups in config.yml.') : null,
       onlySel, table, bkPreview ? previewView(bkPreview) : null)));
     renderBackupsFoot(rows);
   }
+  // No backups.repo in config.yml: the orchestrator keeps the board copy only (30 days).
+  const bkBoardOnly = () => { const c = state.company; return !!c && !(c.backups && c.backups.repo); };
   const fmtDay = (d) => { const x = new Date(d); return isNaN(x) ? String(d) : x.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); };
   async function loadPreview(r) {
     try {
@@ -827,7 +830,7 @@
     renderBackups();
   }
   function previewView(p) {
-    if (p.missing) return h('div', { class: 'callout warn' }, 'This backup copy is no longer stored on the board (older than 30 days). It is still in the GitHub backup: ask Claude to restore ' + p.row.id + ' from that day.');
+    if (p.missing) return h('div', { class: 'callout warn' }, 'This backup copy is no longer stored on the board (older than 30 days).' + (bkBoardOnly() ? '' : ' It is still in the GitHub backup: ask Claude to restore ' + p.row.id + ' from that day.'));
     const b = p.bundle; const t = b.ticket || {}; const s = b.state || {};
     return h('div', { class: 'preview' },
       p.now ? changesView(b, p.now) : h('div', { class: 'callout bad' }, 'This ticket was deleted since. Restoring brings it back exactly as below.'),
@@ -1891,7 +1894,7 @@
         h('dt', null, 'Time zone'), h('dd', null, c.timezone || '—'),
         h('dt', null, 'Slack'), h('dd', null, yes(c.slack_enabled)),
         h('dt', null, 'Screenshots'), h('dd', null, yes(c.screenshots_enabled)),
-        h('dt', null, 'Backups'), h('dd', null, c.backups && c.backups.repo ? c.backups.repo + ' (' + (c.backups.branch || '') + ')' : '—')),
+        h('dt', null, 'Backups'), h('dd', null, c.backups && c.backups.repo ? c.backups.repo + ' (' + (c.backups.branch || '') + ')' : 'Board only (30 days)')),
       h('div', { class: 'settings-wrap' }, h('table', { class: 'settings-table' },
         h('thead', null, h('tr', null, ['Repo', 'GitHub', 'PRs into', 'Release'].map((x) => h('th', null, x)))),
         h('tbody', null, (c.repos || []).map((r) => {

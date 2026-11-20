@@ -1,8 +1,10 @@
 # Daily backup and restore (orchestrator)
 
 Two copies, made by the daily reconcile (and by a Health check when today has none):
-- **GitHub**: one JSON file per ticket in the private repo `backups.repo` from config.yml,
-  branch `backups.branch`. Every daily commit is a dated snapshot; git history keeps them all.
+- **GitHub** (optional): one JSON file per ticket in the private repo `backups.repo` from config.yml,
+  branch `backups.branch`. Every daily commit is a dated snapshot; git history keeps them all. When
+  `backups.repo` is empty or absent, there is no GitHub copy: skip section 2 (commit = null) and do not
+  report it anywhere (not in Health, not in Slack). It is the company's choice: board copy only.
 - **The board**: `backup_index/<YYYY-MM-DD>` + `backup_snaps/<T-n@YYYY-MM-DD>` for the last 30 days, which
   the owner's Backups page lists, previews and restores from.
 
@@ -17,8 +19,8 @@ Fingerprint per ticket: `fp` = `status|plan_rev|status_at|updated_at`, where sta
 `updated_at` falls back to `created_at`. The board computes the same string to show "changed since".
 
 ## 2. GitHub copy
-1. `add_repo` with the owner and name of `backups.repo`, `access: "push"`. If it does not
-   exist or is refused: skip to step 3, add the problem to Health ("Backup repo missing: create the private
+1. `backups.repo` empty or absent: skip to step 3 silently. Otherwise `add_repo` with its owner and name,
+   `access: "push"`. If it does not exist or is refused (a repo is named, so this is a mistake to fix): skip to step 3, add the problem to Health ("Backup repo missing: create the private
    repo <backups.repo>"), and tell the owner once in Slack.
 2. Clone it to `/home/user/<backup repo name>` (reuse an existing clone; `git -C … fetch
    origin`). Use branch `backups.branch`: `git -C … checkout <branch>` (or `git -C … checkout -b <branch>`
