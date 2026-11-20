@@ -55,12 +55,14 @@ Draft → With Claude (planning) → Needs info ↔ author answers → Plan read
      layout, the services the code uses); it asks about branches only when it cannot tell;
    - picks defaults for the rest (company and owner from GitHub, ticket prefix `KB`, time zone, Slack off,
      screenshots on, backups on the board, your logo) and tells you which connectors to add;
-   - shows you everything in one review (`kanbai/config.yml`, `repos.md`, `notes.md`, `screenshots.md`,
-     each line marked detected or default) with one question: looks right, or change something; the same
-     question asks who may create tickets from any Claude chat (organisation, only you, or not now);
+   - shows you everything as a summary (`kanbai/config.yml`, `repos.md`, `notes.md`, `screenshots.md`,
+     each line marked detected or default), with no confirmation to give; its one question is who may
+     create tickets from any Claude chat (organisation, only you, or not now);
    - writes the permission rules, publishes your board, and hands you a branch to merge and the message
      to start the orchestrator.
-   Defaults can be changed later in `kanbai/config.yml`; logo and colour in the board's Settings.
+   It ends with the connectors to add, a table of the defaults used, and what is left for you. Defaults
+   can be changed later in `kanbai/config.yml` (edit it, or ask Claude in a session on the company repo);
+   logo and colour in the board's Settings.
 5. **Merge** that branch.
 6. **Share the board** with your organisation (the board's Share menu).
 7. In a **new** session on the company repo, start the orchestrator with the message setup gives you:
