@@ -51,17 +51,22 @@ Draft → With Claude (planning) → Needs info ↔ author answers → Plan read
 3. In Claude Code on the web, start a **new session with your company repo selected**. The session loads
    the KanbAI skill and permission rules from the repo; there is nothing to upload.
 4. Type **`/kanbai setup`**. It:
-   - checks GitHub and asks a few basics (company, owner, ticket prefix, time zone, Slack, screenshots);
-   - lists your repos to pick, reads each one (CI checks, branches, dependencies, layout, the services the
-     code uses) and asks one pre-filled question about branches;
-   - tells you which connectors are required, recommended or nice to have;
-   - finds your logo (or lets you skip);
-   - drafts `kanbai/config.yml`, `repos.md`, `notes.md` (and `screenshots.md`) for you to review;
-   - writes the permission rules, publishes your board, and hands you a branch to merge.
+   - asks which repos the pipeline may work on, then reads each one (CI checks, branches, dependencies,
+     layout, the services the code uses); it asks about branches only when it cannot tell;
+   - picks defaults for the rest (company and owner from GitHub, ticket prefix `KB`, time zone, Slack off,
+     screenshots on, backups on the board, your logo) and tells you which connectors to add;
+   - shows you everything in one review (`kanbai/config.yml`, `repos.md`, `notes.md`, `screenshots.md`,
+     each line marked detected or default) with one question: looks right, or change something; the same
+     question asks who may create tickets from any Claude chat (organisation, only you, or not now);
+   - writes the permission rules, publishes your board, and hands you a branch to merge and the message
+     to start the orchestrator.
+   Defaults can be changed later in `kanbai/config.yml`; logo and colour in the board's Settings.
 5. **Merge** that branch.
 6. **Share the board** with your organisation (the board's Share menu).
-7. In a **new** session on the company repo, start the orchestrator:
-   `/kanbai orchestrator <your board link>`
+7. In a **new** session on the company repo, start the orchestrator with the message setup gives you:
+   `/kanbai orchestrator <your board link>`, and on the next line
+   `Attach with push access: <your product repos>`. Typing the repos yourself is what lets the
+   orchestrator attach them (to read PR status and branch protection, and to close PRs).
 8. Teammates open the board once; tick approvers and admins in **More → Permissions**.
 9. Try a small first ticket. Set `dry_run: true` in `kanbai/config.yml` first if you want to see the code
    on a branch before any PR is opened.
