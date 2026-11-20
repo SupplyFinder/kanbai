@@ -1689,7 +1689,7 @@
   const hostTheme = document.documentElement.getAttribute('data-theme');
   const THEMES = ['system', 'light', 'dark'];
   let themeMode = 'system';
-  try { themeMode = THEMES.includes(localStorage.getItem('ai-tickets.theme')) ? localStorage.getItem('ai-tickets.theme') : 'system'; } catch (_) { /* no storage */ }
+  try { themeMode = THEMES.includes(localStorage.getItem('kanbai.theme')) ? localStorage.getItem('kanbai.theme') : 'system'; } catch (_) { /* no storage */ }
   function applyTheme() {
     const root = document.documentElement;
     if (themeMode === 'system') { if (hostTheme) root.setAttribute('data-theme', hostTheme); else root.removeAttribute('data-theme'); }
@@ -1698,7 +1698,7 @@
   }
   $('btn-theme').addEventListener('click', () => {
     themeMode = THEMES[(THEMES.indexOf(themeMode) + 1) % THEMES.length];
-    try { localStorage.setItem('ai-tickets.theme', themeMode); } catch (_) { /* no storage */ }
+    try { localStorage.setItem('kanbai.theme', themeMode); } catch (_) { /* no storage */ }
     applyTheme();
   });
   applyTheme();
@@ -1987,12 +1987,12 @@
 
   // ---------- wiring ----------
   $('search').addEventListener('input', render);
-  try { const saved = JSON.parse(localStorage.getItem('ai-tickets.filters') || '{}'); for (const k of FILTER_IDS) if (saved[k] && k !== 'fl-author') $(k).value = saved[k]; } catch (_) { /* no storage */ }
-  for (const k of FILTER_IDS) $(k).addEventListener('change', () => { try { localStorage.setItem('ai-tickets.filters', JSON.stringify(readFilters())); } catch (_) { /* no storage */ } render(); });
-  $('fl-clear').addEventListener('click', () => { for (const k of FILTER_IDS) $(k).value = ''; try { localStorage.removeItem('ai-tickets.filters'); } catch (_) { /* no storage */ } render(); });
-  try { $('show-archived').checked = localStorage.getItem('ai-tickets.showArchived') === '1'; } catch (_) { /* no storage */ }
+  try { const saved = JSON.parse(localStorage.getItem('kanbai.filters') || '{}'); for (const k of FILTER_IDS) if (saved[k] && k !== 'fl-author') $(k).value = saved[k]; } catch (_) { /* no storage */ }
+  for (const k of FILTER_IDS) $(k).addEventListener('change', () => { try { localStorage.setItem('kanbai.filters', JSON.stringify(readFilters())); } catch (_) { /* no storage */ } render(); });
+  $('fl-clear').addEventListener('click', () => { for (const k of FILTER_IDS) $(k).value = ''; try { localStorage.removeItem('kanbai.filters'); } catch (_) { /* no storage */ } render(); });
+  try { $('show-archived').checked = localStorage.getItem('kanbai.showArchived') === '1'; } catch (_) { /* no storage */ }
   $('show-archived').addEventListener('change', () => {
-    try { localStorage.setItem('ai-tickets.showArchived', $('show-archived').checked ? '1' : '0'); } catch (_) { /* no storage */ }
+    try { localStorage.setItem('kanbai.showArchived', $('show-archived').checked ? '1' : '0'); } catch (_) { /* no storage */ }
     render();
   });
   document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => {
