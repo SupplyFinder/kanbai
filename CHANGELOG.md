@@ -2,10 +2,12 @@
 
 ## Unreleased
 
-- Setup asks far fewer questions: only which repos to use and one review of the drafts (plus branches
-  when they cannot be detected). Company name, ticket prefix (`KB` by default),
-  time zone, Slack, screenshots, backups and logo take defaults shown in the review, editable in
-  `kanbai/config.yml` or the board's Settings → Branding.
+- Setup asks far fewer questions: only which repos to use and who gets the chat skill (plus branches
+  when they cannot be detected). No review to confirm and no Slack channel question: company name,
+  ticket prefix (`KB` by default), time zone, Slack (off), screenshots, backups and logo take defaults
+  shown in the closing summary, editable in `kanbai/config.yml` or the board's Settings → Branding.
+- Setup ends with three sections: Connectors, a "Defaults used" table (setting, value, where to change),
+  and What's left for you.
 - The orchestrator attaches only the product repos named in the message that starts it
   (`Attach with push access: …`, given ready to paste by setup). In Auto mode an unnamed repo could be
   refused even though `add_repo` is allowed; a missing repo is now a Health problem that says how to fix it.

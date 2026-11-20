@@ -6,9 +6,10 @@ Commands: `/kanbai setup`, `/kanbai add-repo <owner/name>`, `/kanbai remove-repo
 and the board's settings documents; never a product repo.
 
 **Ask as little as possible.** Ask only what is mandatory and cannot be detected or defaulted: which repos
-the pipeline may work on (step 3), and one final review of the drafts (step 8). Ask about branches
-(step 5) only when detection is unclear. Everything else takes the default below, is shown in the step 8
-review marked "default", and can be changed there or later in `kanbai/config.yml` (the orchestrator picks it up
+the pipeline may work on (step 3), and who gets the chat skill (step 8). Ask about branches
+(step 5) only when detection is unclear. Never ask the person to review or confirm the drafts, and never
+ask for a Slack channel. Everything else takes the default below, is shown in the step 8
+summary marked "default", and can be changed later in `kanbai/config.yml` or in the setup PR (the orchestrator picks it up
 on its next daily check or restart) or, for logo and colour, in the board's Settings → Branding. Ask with
 AskUserQuestion when available, all questions of a step in one call, the detected answer first.
 
@@ -28,11 +29,12 @@ AskUserQuestion when available, all questions of a step in one call, the detecte
   `…/KB-<number>-…` (another pipeline), use `KB2`, `KB3`… Changing it later in `config.yml` only affects new
   tickets.
 - Time zone: from the person's locale or email domain country; else `UTC`.
-- Slack: off, unless `SLACK_BOT_TOKEN` is set in this environment; then ask only for the channel id (step 8).
+- Slack: off (no question). If `SLACK_BOT_TOKEN` is set in this environment, say in the summary that Slack can be
+  turned on by setting `slack.enabled: true` and `slack.channel` in `config.yml`.
 - PR screenshots: on, `screenshots.repo` = the company repo, branch `screenshots`. Screenshots are only
   taken for tickets whose author ticks "Add screenshots to the PRs", and only in repos `screenshots.md`
   lists (the UI repos found in step 4). With no UI repo picked, leave it off.
-- Backups: board only (30 days); `backups.repo` empty. Say in the review that a private GitHub repo can be
+- Backups: board only (30 days); `backups.repo` empty. Say in the summary that a private GitHub repo can be
   added later for a permanent copy.
 
 ### 3. Pick the repos (the one mandatory question)
@@ -64,7 +66,7 @@ Attach it read-only (`add_repo`, clone, one at a time) and work out, writing dow
 
 ### 5. Branches (ask only when unclear)
 No question when every repo's PR target and release branch are clear from its PR history and CI: show
-them in the step 8 review. Ask only about the repos whose detection is unclear (no PR history, or PRs
+them in the step 8 summary. Ask only about the repos whose detection is unclear (no PR history, or PRs
 split between branches), all in one question. For a repo whose
 PR target IS its release branch (main-only teams): warn that merging a Claude PR releases it, keep PRs as
 drafts, and recommend branch protection with required reviews.
@@ -86,7 +88,7 @@ environment.
 Candidates, in order: the GitHub organisation's avatar; the website (organisation `blog` field, or the
 domain of the person's email): its header logo (SVG/PNG), `apple-touch-icon`, favicon, social image. Show
 the candidates (save each to a file and show it). No question: use the first good candidate (a wordmark
-over a square icon), say which in the review, and that it can be changed in the board's Settings → Branding. Suggest the main colour from the chosen logo. For dark mode, if the logo has dark text,
+over a square icon), say which in the summary, and that it can be changed in the board's Settings → Branding. Suggest the main colour from the chosen logo. For dark mode, if the logo has dark text,
 make a light-text copy. A website the network blocks: say so and fall back to the avatar or none.
 
 ### 8. Write the company files
@@ -95,10 +97,9 @@ text; notable changes; environments; then a few questions the code cannot answer
 change without asking, who reviews PRs) and `screenshots.md` (when screenshots are on: which repos, how to log in,
 preview URLs if PR checks show preview deployments). Format: `company-files.md`. For the questions the code
 cannot answer, write a default ("Notable changes" list; reviews: the owner) instead of asking.
-Show the drafts in one message, marking each line "detected", "default" or "you said", then ask ONE
-question: "Looks right" (Recommended) or "Change something" (they type what in Other). In the same call,
-only when needed: the Slack channel id (step 2) and the chat skill (step 10a). Apply the edits and go on;
-ask again only if an edit is unclear.
+Show the drafts in one message, marking each line "detected", "default" or "you said", as a summary, not
+a question: no "Looks right?" confirmation and no Slack channel question. Ask ONE question only, the chat
+skill (step 10a), then go on. The person changes anything else later in the company files (or in the setup PR).
 
 ### 9. Permission rules
 Write `.claude/settings.json` from `settings.base.json` (next to this file; drop its `_note`) plus, for this company:
@@ -108,8 +109,8 @@ Write `.claude/settings.json` from `settings.base.json` (next to this file; drop
   with `-u` / `--set-upstream`, force pushes and branch deletions;
 - never allow merging PRs or turning on auto-merge.
 These rules catch plain `git push` lines only; the real protection is GitHub branch protection (step 4):
-list unprotected PR targets and release branches in the step 8 review (no separate question): the board
-shows a warning until they are protected on GitHub. If the person says in the review that protection is
+list unprotected PR targets and release branches in the step 8 summary (no question): the board
+shows a warning until they are protected on GitHub. If the person says later that protection is
 not wanted, add `Protection: not required for <branch>` to that repo's section in `repos.md`; the board
 then shows a note instead.
 
@@ -120,7 +121,7 @@ seed its settings with `ArtifactData`: `config/company` (orchestrator.md, step 1
 defaults in board.md), `config/runtime` (`slack_channel` when Slack is on), `config/branding` (upload the
 chosen logo files to the board's assets first, then `{logo_light, logo_dark, accent}`).
 
-### 10a. Chat skill (asked in the step 8 review, not separately)
+### 10a. Chat skill (the one question asked in step 8)
 Who gets "create a ticket in the kanban from our discussion" in any Claude chat:
 "The whole organisation (Recommended)", "Only me" or "Not now". For either yes, first build a plugin folder
 in the scratchpad (never in the repo): `kanbai-chat/.claude-plugin/plugin.json` = `{"name": "kanbai",
@@ -140,21 +141,33 @@ In chats only the ticket role works (chat-ticket.md); whoever uses it needs acce
 
 ### 11. Hand over
 Commit the company files and `.claude/settings.json` on a new branch, push it, and give the person the
-link to open a PR (open it yourself only if they ask). Then list what is left for them:
+link to open a PR (open it yourself only if they ask), plus the board link. Then end the message with these
+three sections, in this order and with these headings:
+
+**Connectors**: one line per service from step 6: connected, available to add (claude.ai → Settings →
+Connectors), failing to connect, or no connector (planning works from the code).
+
+**Defaults used**: a table with columns Setting · Value · Where to change. Rows: ticket prefix, time zone,
+Slack, screenshots, backups, schedules, dry run, logo and colour. Where to change: `kanbai/config.yml`
+(logo and colour: the board's Settings → Branding). Under the table, say: "Edit `kanbai/config.yml` directly,
+or ask me here and I update it (on the setup branch before the PR is merged, on a new branch and PR after)."
+
+**What's left for you**:
 1. merge the PR;
 2. share the board with the organisation (the board's Share menu);
 3. start the orchestrator in a NEW session on the company repo with this message, filled in (give it
-   ready to paste, one repo per `owner/name`, every repo in `repos.md`, none from `forbidden_repos`):
-   `/kanbai orchestrator <board url>` and, on the next line, `Attach with push access: <owner/name>, …`.
-   The person typing the repos is what lets the session attach them in Auto mode;
+   ready to paste in a code block, one repo per `owner/name`, every repo in `repos.md`, none from
+   `forbidden_repos`): `/kanbai orchestrator <board url>` and, on the next line,
+   `Attach with push access: <owner/name>, …`. The person typing the repos is what lets the session attach
+   them in Auto mode;
 4. teammates open the board once; tick approvers and admins in Permissions;
 5. if the chat skill was set up in step 10a: approve it in the organisation library if asked (organisation),
    or upload the zip as a personal skill (only me); redo step 10a whenever `config.yml` or the skill changes;
 6. first ticket: something small, with `dry_run: true` in `config.yml` if they want to see the code before
    any PR exists.
-Also list the defaults used (prefix, time zone, Slack, screenshots, backups, logo) in one line each, with
-where to change them. Also say once: when the orchestrator restarts it moves its scheduled checks; old ones it cannot delete are
-disabled and can be deleted by hand from the scheduled tasks list.
+Add after the list, once: when the orchestrator restarts it moves its scheduled checks; old ones it cannot
+delete are disabled and can be deleted by hand from the scheduled tasks list. Put any warning (unprotected
+branch, main-only repo) above the three sections, never inside them.
 
 ## /kanbai add-repo <owner/name>
 Steps 4–6 for that repo only (and the branch question for it), then: add its section to `repos.md` and its
