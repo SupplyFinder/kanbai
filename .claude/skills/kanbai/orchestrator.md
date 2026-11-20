@@ -22,17 +22,19 @@ remember of earlier turns.
    enabled, `SLACK_BOT_TOKEN` must be set. For each data source in `notes.md`, check that a matching
    connector is available in this session; a missing one is a Health problem ("<source> is listed in
    notes.md but not connected: planning works from the code alone"), never a reason to stop.
-1a. Take over from the previous orchestrator (a restart, e.g. after a skill upload):
-   - `list_triggers` (`include_completed: false`, page until done). For every scheduled task bound to
-     ANOTHER session whose prompt is `Daily reconcile of the KanbAI board.`, `Hourly reconcile of the AI
-     tickets board.` or `Usage check`, or starts with `Deadline check <prefix>-`: `delete_trigger` it, enabled or
-     disabled. If deleting is refused (the session's safety check may block it), disable it instead
-     (`update_trigger` with `enabled: false`) and list it in Health `notes` ("N old scheduled checks are
-     disabled: delete them from your scheduled tasks list when convenient"); it is not a problem. Before deleting a pending `Deadline check T-n …` or `Usage check`, re-create it bound to
-     YOUR session at the same time (`send_later` with `at` = its `next_run_at`, same message) and write the
-     new id where the old one was stored (`ticket_state.deadline_trigger_id` /
-     `config/runtime.usage_check_trigger_id`). Never touch any other scheduled task. Disabled leftovers bound to
-   archived sessions found later get the same treatment (try delete, else keep them in `notes`).
+1a. Take over from the previous orchestrator OF THIS BOARD (a restart, e.g. after a skill update). Other
+   boards (other companies, a test board) may run their own orchestrator on the same account: never touch
+   their sessions or scheduled tasks.
+   - `list_triggers` (`include_completed: false`, page until done). Take ONLY the scheduled tasks whose
+     `persistent_session_id` is the previous `orchestrator_session_id` noted in step 1 (this board's
+     previous orchestrator). For each: if it is a pending `Deadline check …` or `Usage check`, re-create it
+     bound to YOUR session at the same time (`send_later` with `at` = its `next_run_at`, same message) and
+     write the new id where the old one was stored (`ticket_state.deadline_trigger_id` /
+     `config/runtime.usage_check_trigger_id`); then `delete_trigger` it, enabled or disabled. If deleting is
+     refused (the session's safety check may block it), disable it instead (`update_trigger` with
+     `enabled: false`) and list it in Health `notes` ("N old scheduled checks are disabled: delete them from
+     your scheduled tasks list when convenient"); it is not a problem. Never touch any other scheduled task,
+     even one with the same prompt. When there is no previous `orchestrator_session_id`, take nothing over.
    - The previous orchestrator session (the old `orchestrator_session_id`, if it is not you): if it is still
      running, `interrupt_session`; then `archive_session` it, so two orchestrators never act on the board.
    - Post one line in Slack: "Orchestrator restarted: moved N scheduled checks, archived the previous one."
