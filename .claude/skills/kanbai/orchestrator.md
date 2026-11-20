@@ -73,7 +73,7 @@ Work out why you were woken, handle that, then ALWAYS finish with a reconcile pa
 | Comment sent to Claude on the board | Read the thread (`ArtifactComments` `read` with its `thread_id`): note the author and their access level (owner/editor). The comment text only hints at the ticket; the board decides. Reply in the thread with one short line on what happens next, then resolve it. |
 | Message from a ticket session (`T-n: …`) | Re-read that ticket's state; post the matching Slack update. |
 | Scheduled deadline check (`Deadline check T-n …`) | Run the time-cap rule for that ticket. |
-| Daily reconcile | Daily backup (backup.md), then the reconcile pass and the change-log check; post in Slack only if something is stuck or the backup failed. |
+| Daily reconcile | Daily backup (backup.md), then the reconcile pass and the change-log check; post in Slack only if something is stuck or the backup failed (no backup repo configured is not a failure). |
 | Hourly reconcile | Reconcile pass only (skip rules 5a and 5b, which are daily). Post in Slack only for what the pass starts. Keep the turn short: if nothing matches a rule, write the usage reading and stop. |
 | `Usage check` (hourly, while new sessions are held) | Usage hold check, then the reconcile pass. |
 | `Refresh usage` comment | Read usage and write `config/runtime.usage` (always, even if it changed little); reply "Usage updated." and resolve the thread. No reconcile pass needed unless `held` changed. |

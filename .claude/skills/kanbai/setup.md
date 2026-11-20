@@ -19,12 +19,13 @@ several questions at once, each pre-filled with what you detected.
 Company name; the board owner's first name (the person running setup, from their profile); ticket prefix
 (suggest 2–4 capitals from the company name); time zone (suggest from the person's locale); Slack
 notifications yes/no (then the channel id, and the bot token goes in the environment variable
-`SLACK_BOT_TOKEN`, never in chat); PR screenshots yes/no; the private backup repo name (suggest
-`<company repo>-backup`; it must exist, the person creates it on GitHub).
+`SLACK_BOT_TOKEN`, never in chat); PR screenshots yes/no; backups: "Keep a permanent copy on GitHub
+(recommended)" (then the private repo name: suggest `<company repo>-backup`; it must exist, the person creates
+it on GitHub) or "Board only (last 30 days)" (leave `backups.repo` empty).
 
 ### 3. Pick the repos
 Show the reachable repos (name, last push) and ask which ones the pipeline may work on. Never offer the
-company repo itself or the backup repo.
+company repo itself or the backup repo (if any).
 
 ### 4. Read each picked repo (read-only)
 Attach it read-only (`add_repo`, clone, one at a time) and work out, writing down where each fact came from:
