@@ -29,7 +29,9 @@ AskUserQuestion when available, all questions of a step in one call, the detecte
   tickets.
 - Time zone: from the person's locale or email domain country; else `UTC`.
 - Slack: off, unless `SLACK_BOT_TOKEN` is set in this environment; then ask only for the channel id (step 8).
-- PR screenshots: off (the author can still tick it per ticket once it is enabled in `config.yml`).
+- PR screenshots: on, `screenshots.repo` = the company repo, branch `screenshots`. Screenshots are only
+  taken for tickets whose author ticks "Add screenshots to the PRs", and only in repos `screenshots.md`
+  lists (the UI repos found in step 4). With no UI repo picked, leave it off.
 - Backups: board only (30 days); `backups.repo` empty. Say in the review that a private GitHub repo can be
   added later for a permanent copy.
 
@@ -90,7 +92,7 @@ make a light-text copy. A website the network blocks: say so and fall back to th
 ### 8. Write the company files
 Draft `kanbai/config.yml`, `repos.md`, `notes.md` (data sources found, with "not connected" where so; UI
 text; notable changes; environments; then a few questions the code cannot answer: what Claude must never
-change without asking, who reviews PRs) and `screenshots.md` (only if enabled: which repos, how to log in,
+change without asking, who reviews PRs) and `screenshots.md` (when screenshots are on: which repos, how to log in,
 preview URLs if PR checks show preview deployments). Format: `company-files.md`. For the questions the code
 cannot answer, write a default ("Notable changes" list; reviews: the owner) instead of asking.
 Show the drafts in one message, marking each line "detected", "default" or "you said", then ask ONE
