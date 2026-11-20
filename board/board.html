@@ -139,7 +139,7 @@
   .shots img { width: 100%; border: 1px solid var(--line); border-radius: 8px; }
   .shots figcaption { font-size: 13px; color: var(--muted); }
   .confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-size: 13px; }
-  .empty-board { margin: 40px auto; max-width: 420px; text-align: center; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
+  .empty-board { margin: 24px auto 40px; max-width: 420px; text-align: center; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
   .empty-board strong { color: var(--fg); font-size: 16px; }
 
   dialog { border: 1px solid var(--line); border-radius: 12px; padding: 0; background: var(--surface); color: var(--fg); width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
@@ -1044,8 +1044,8 @@
   function render() {
     const cols = $('cols'); cols.replaceChildren();
     const all = [...state.tickets.keys()];
+    // With no tickets yet, the empty columns still show the stages; the message sits below them.
     $('empty').hidden = !(state.loaded && all.length === 0);
-    if (state.loaded && all.length === 0) return;
     const q = $('search').value.trim().toLowerCase();
     const f = readFilters(); const myId = state.me && state.me.id;
     const allowed = all.filter((id) => statusOf(id) !== 'Draft' || state.owner || state.tickets.get(id).author_id === myId);
