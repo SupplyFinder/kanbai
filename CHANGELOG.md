@@ -3,7 +3,7 @@
 ## Unreleased
 
 - Setup asks far fewer questions: only which repos to use and one review of the drafts (plus branches
-  when they cannot be detected). Company name, ticket prefix (never one another pipeline already uses),
+  when they cannot be detected). Company name, ticket prefix (`KB` by default),
   time zone, Slack, screenshots, backups and logo take defaults shown in the review, editable in
   `kanbai/config.yml` or the board's Settings → Branding.
 - The orchestrator attaches only the product repos named in the message that starts it

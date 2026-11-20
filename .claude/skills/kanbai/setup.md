@@ -24,9 +24,9 @@ AskUserQuestion when available, all questions of a step in one call, the detecte
 ### 2. Basics (no questions: defaults)
 - Company name: the GitHub organisation's display name (else its login, readable).
 - Owner: the first name of the person running setup (their profile).
-- Ticket prefix: 2–4 capitals from the company name. Never one already used by another pipeline: if the
-  picked repos have branches or PRs named `…/<PREFIX>-<number>-…`, or another KanbAI/AI-tickets company repo
-  uses it, take the next free one (e.g. `KB`). Changing it later only affects new tickets.
+- Ticket prefix: `KB` (tickets KB-1, KB-2…). Only if the picked repos already have branches or PRs named
+  `…/KB-<number>-…` (another pipeline), use `KB2`, `KB3`… Changing it later in `config.yml` only affects new
+  tickets.
 - Time zone: from the person's locale or email domain country; else `UTC`.
 - Slack: off, unless `SLACK_BOT_TOKEN` is set in this environment; then ask only for the channel id (step 8).
 - PR screenshots: off (the author can still tick it per ticket once it is enabled in `config.yml`).
