@@ -41,6 +41,8 @@ section per product repo with these lines (omit what does not apply):
 - `Baseline: <errors that already exist and do not count>`
 - `Layout: <where things go; skills or AGENTS.md to follow>`
 - `Rules: <things never to do in this repo>`
+- `Protection: not required for <branch>[, <branch>]` — the team chose not to protect these branches on
+  GitHub; the board then shows a note instead of a warning (omit the line in the normal case)
 An optional `## Hints` section ends the file.
 
 ## notes.md

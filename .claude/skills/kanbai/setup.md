@@ -89,7 +89,9 @@ Write `.claude/settings.json` from `settings.base.json` (next to this file; drop
   with `-u` / `--set-upstream`, force pushes and branch deletions;
 - never allow merging PRs or turning on auto-merge.
 These rules catch plain `git push` lines only; the real protection is GitHub branch protection (step 4):
-list unprotected PR targets and release branches and recommend protecting them.
+list unprotected PR targets and release branches and ask, per branch: "Protect it on GitHub (recommended)"
+or "Not required". For "Not required", add `Protection: not required for <branch>` to that repo's section
+in `repos.md`; the board then shows a note instead of a warning.
 
 ### 10. Publish the board
 Publish `board/board.html` as a new artifact (`Artifact` publish, `icon: "kanban"`, a one-line

@@ -242,6 +242,9 @@
   .bk-days .sub { font-size: 11.5px; color: var(--muted); font-weight: 400; }
   .diff-changed { color: var(--warn); font-weight: 600; } .diff-deleted { color: var(--bad); font-weight: 600; } .diff-new { color: var(--info); font-weight: 600; } .diff-same { color: var(--muted); }
   .preview { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; }
+  .bcell { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+  .prot { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+  .prot.ok { color: var(--good); } .prot.bad { color: var(--bad); font-weight: 600; } .prot.acc { color: var(--muted); }
   .ldiff { font-family: var(--font-mono); font-size: 12px; border-radius: 8px; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); }
   .ldiff div { padding: 1px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .ldiff .del { background: var(--bad-soft); color: var(--bad); }
@@ -561,7 +564,7 @@
     return [...seen.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).slice(0, 2).map(([label, tone]) => [tone, label]);
   }
   const PRIO = { high: 0, medium: 1, low: 2 };
-  // Company settings, written by the orchestrator from the company repo (ai-tickets/config.yml + repos.md):
+  // Company settings, written by the orchestrator from the company repo (kanbai/config.yml + repos.md):
   // config/company = { name, owner_name, prefix, timezone, repos: [{key, label, repo, pr_target, release}], … }
   const companyRepos = () => {
     const c = state.company && Array.isArray(state.company.repos) ? state.company.repos : [];
@@ -1866,10 +1869,19 @@
     return res.ok ? 'Sent. Claude checks you are an admin, applies it within a minute and posts in Slack.' : 'Saved as a request. ' + res.reason;
   }
 
+  // A branch name with its GitHub protection state (written by the orchestrator on its checks).
+  function branchCell(name, prot, r, same) {
+    if (!name) return '—';
+    const accepted = (r.protection_not_required || []).includes(name);
+    const mark = prot === true ? h('span', { class: 'prot ok', title: 'Protected on GitHub' }, '✓ protected')
+      : prot === false ? h('span', { class: 'prot ' + (accepted ? 'acc' : 'bad'), title: accepted ? 'Not protected; the team accepted this in repos.md' : 'Not protected on GitHub' }, accepted ? '✗ not protected (accepted)' : '✗ not protected')
+      : h('span', { class: 'prot', title: 'Not checked yet' }, '· not checked');
+    return h('span', { class: 'bcell' }, h('code', null, name), mark, same && prot === false && !accepted ? h('span', { class: 'prot bad' }, 'merging releases') : null);
+  }
   // Read-only view of the company settings. They are edited in the company repo, not here.
   function renderCompanySettings() {
     const c = state.company; const box = $('c-body');
-    if (!c) { box.replaceChildren(h('div', { class: 'empty-col' }, 'Not received yet: the orchestrator writes them from the company repo (ai-tickets/config.yml and repos.md) when it starts.')); return; }
+    if (!c) { box.replaceChildren(h('div', { class: 'empty-col' }, 'Not received yet: the orchestrator writes them from the company repo (kanbai/config.yml and repos.md) when it starts.')); return; }
     const yes = (v) => (v ? 'On' : 'Off');
     box.replaceChildren(
       h('dl', { class: 'kv' },
@@ -1882,8 +1894,13 @@
         h('dt', null, 'Backups'), h('dd', null, c.backups && c.backups.repo ? c.backups.repo + ' (' + (c.backups.branch || '') + ')' : '—')),
       h('div', { class: 'settings-wrap' }, h('table', { class: 'settings-table' },
         h('thead', null, h('tr', null, ['Repo', 'GitHub', 'PRs into', 'Release'].map((x) => h('th', null, x)))),
-        h('tbody', null, (c.repos || []).map((r) => h('tr', null, h('td', null, r.label || r.key), h('td', null, r.repo || '—'), h('td', null, h('code', null, r.pr_target || '—')), h('td', null, h('code', null, r.release || '—'))))))),
-      h('div', { class: 'empty-col' }, 'To change these, edit ai-tickets/config.yml or repos.md in the company repo; the orchestrator applies them on its next daily check or restart.' + (c.updated_at ? ' Last received ' + fmt(c.updated_at) + '.' : '')));
+        h('tbody', null, (c.repos || []).map((r) => {
+          const same = r.pr_target && r.pr_target === r.release;
+          return h('tr', null, h('td', null, r.label || r.key), h('td', null, r.repo || '—'),
+            h('td', null, branchCell(r.pr_target, r.pr_target_protected, r, same)),
+            h('td', null, same ? h('span', { class: 'empty-col', style: 'padding:0' }, 'same branch') : branchCell(r.release, r.release_protected, r, false)));
+        })))),
+      h('div', { class: 'empty-col' }, 'To change these, edit kanbai/config.yml or repos.md in the company repo; the orchestrator applies them on its next daily check or restart.' + (c.updated_at ? ' Last received ' + fmt(c.updated_at) + '.' : '')));
   }
 
   // ---------- settings ----------

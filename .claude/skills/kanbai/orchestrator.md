@@ -44,9 +44,19 @@ remember of earlier turns.
    If `schedules.hourly` is set, also the hourly check if none exists for this session: `create_trigger`,
    bound to this session, `CRON_TZ=<timezone> <schedules.hourly>`, prompt `Hourly reconcile of the AI
    tickets board.`, initiation `human_schedule`. It catches anything a missed wake left waiting.
-4. Branch protection: for every repo in `repos.md`, `list_branches` and check that its PR target and
-   release branch are `protected`; each one that is not → a Health problem ("<repo>: <branch> is not
-   protected on GitHub; protect it so nothing can be pushed there directly"). Repeat on each daily reconcile.
+4. Branch protection: for every repo in `repos.md`, `list_branches` and read whether its PR target and
+   release branch are `protected` (one check when they are the same branch). Repeat on each daily reconcile
+   and on a Health check.
+   - Store the result in `config/company.repos[]`: `pr_target_protected`, `release_protected` (true, false,
+     or null when the branch could not be read) and `protection_checked_at`; `protection_not_required` =
+     the branches the repo's `Protection: not required` line names (see company-files.md).
+   - An unprotected branch that is not in `protection_not_required` → a Health problem ("<repo>: <branch>
+     is not protected on GitHub; protect it so nothing can be pushed there directly"). One that is → a
+     Health note ("<repo>: <branch> not protected (accepted in repos.md)").
+   - Slack, once per branch: the first time a branch is found unprotected and not accepted, post one line
+     in the main channel mentioning the owner, the same text as the problem, and record it in
+     `config/runtime.protection_alerted["<repo>:<branch>"]` = now. Never post again for that key; remove
+     the key when the branch becomes protected or accepted (so it is announced again if it ever goes back).
 4a. Skill version: note the version in the SKILL.md you loaded ("Skill version: …") and the one in the repo
    (`git -C /home/user/<company repo name> fetch origin` then
    `git -C /home/user/<company repo name> show origin/HEAD:.claude/skills/kanbai/SKILL.md`, the "Skill

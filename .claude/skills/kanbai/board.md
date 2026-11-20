@@ -122,7 +122,8 @@ Always read it fresh; never assume these defaults if the document says otherwise
 (percentages 0–100, ISO times). The board's usage bar shows it live and flags `held`. `usage_check_trigger_id` = the pending hourly usage check, if any.
 
 ### `config/company` — owner-only, written by the orchestrator from the company files
-`{ name, owner_name, prefix, timezone, repos: [{key, label, repo, pr_target, release}], slack_enabled,
+`{ name, owner_name, prefix, timezone, repos: [{key, label, repo, pr_target, release, pr_target_protected?,
+release_protected?, protection_not_required?, protection_checked_at?}], slack_enabled,
 screenshots_enabled, backups: {repo, branch}, updated_at }`. The board uses it for the repo list (filters,
 labels), the ticket prefix and its wording. Edit the company files, not this document.
 
