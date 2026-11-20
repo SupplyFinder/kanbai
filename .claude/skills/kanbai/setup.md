@@ -124,7 +124,10 @@ Commit the company files and `.claude/settings.json` on a new branch, push it, a
 link to open a PR (open it yourself only if they ask). Then list what is left for them:
 1. merge the PR;
 2. share the board with the organisation (the board's Share menu);
-3. start the orchestrator in a NEW session on the company repo: `/kanbai orchestrator <board url>`;
+3. start the orchestrator in a NEW session on the company repo with this message, filled in (give it
+   ready to paste, one repo per `owner/name`, every repo in `repos.md`, none from `forbidden_repos`):
+   `/kanbai orchestrator <board url>` and, on the next line, `Attach with push access: <owner/name>, …`.
+   The person typing the repos is what lets the session attach them in Auto mode;
 4. teammates open the board once; tick approvers and admins in Permissions;
 5. if the chat skill was set up in step 10a: approve it in the organisation library if asked (organisation),
    or upload the zip as a personal skill (only me); redo step 10a whenever `config.yml` or the skill changes;

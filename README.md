@@ -60,8 +60,10 @@ Draft → With Claude (planning) → Needs info ↔ author answers → Plan read
    - writes the permission rules, publishes your board, and hands you a branch to merge.
 5. **Merge** that branch.
 6. **Share the board** with your organisation (the board's Share menu).
-7. In a **new** session on the company repo, start the orchestrator:
-   `/kanbai orchestrator <your board link>`
+7. In a **new** session on the company repo, start the orchestrator with the message setup gives you:
+   `/kanbai orchestrator <your board link>`, and on the next line
+   `Attach with push access: <your product repos>`. Typing the repos yourself is what lets the
+   orchestrator attach them (to read PR status and branch protection, and to close PRs).
 8. Teammates open the board once; tick approvers and admins in **More → Permissions**.
 9. Try a small first ticket. Set `dry_run: true` in `kanbai/config.yml` first if you want to see the code
    on a branch before any PR is opened.

@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-- The orchestrator attaches the product repos from `repos.md` itself when it starts (and on each daily
-  check), so branch protection, PR status and PR closing work without attaching them by hand.
+- The orchestrator attaches only the product repos named in the message that starts it
+  (`Attach with push access: …`, given ready to paste by setup). In Auto mode an unnamed repo could be
+  refused even though `add_repo` is allowed; a missing repo is now a Health problem that says how to fix it.
 - Ticket sessions are told in their first message which repos they may attach (push for coding, read
   for planning and review). Auto mode judges `add_repo` from the session's own messages, so an attach
   was sometimes refused; a coding session now pauses instead of retrying when that happens.

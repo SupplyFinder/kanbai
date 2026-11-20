@@ -46,13 +46,18 @@ remember of earlier turns.
    If `schedules.hourly` is set, also the hourly check if none exists for this session: `create_trigger`,
    bound to this session, `CRON_TZ=<timezone> <schedules.hourly>`, prompt `Hourly reconcile of the KanbAI
    board.`, initiation `human_schedule`. It catches anything a missed wake left waiting.
-3a. Product repos: the session starts with only the company repo in its GitHub scope. For every repo in
-   `repos.md` (never one in `forbidden_repos`), `add_repo` with `access: "push"` (closing a PR is a GitHub API
-   write; the orchestrator never pushes code), one at a time, so branch protection, PR status and PR
-   closing work. No clone is needed: the orchestrator only uses the GitHub tools (if `add_repo` asks for a
-   clone, use `--depth 1` into `/home/user/<name>`). A repo that cannot be
-   attached → a Health problem ("<repo> could not be attached: <reason>"), never a reason to stop. Repeat
-   on each daily reconcile for repos added to `repos.md` since.
+3a. Product repos: the session starts with only the company repo in its GitHub scope. Attach the repos the
+   owner named in the message that started you (a line `Attach with push access: …`, from setup's hand-over),
+   one at a time, `add_repo` with `access: "push"` (closing a PR is a GitHub API write; you never push code),
+   and only those: never a repo the owner did not name or one in `forbidden_repos`. Auto mode judges
+   `add_repo` from what a person asked this session, so a repo nobody named can be refused even though
+   `.claude/settings.json` allows the tool. No clone is needed: you only use the GitHub tools (if `add_repo`
+   asks for a clone, use `--depth 1` into `/home/user/<name>`).
+   - A repo in `repos.md` that was not named, or whose attach is refused → a Health problem, never a reason
+     to stop, with the fix in its text: "<repo> is not attached: send this session `Attach with push access:
+     <repo>` (or start the orchestrator again with the line from setup), then run a Health check". Do not
+     retry a refused attach on your own; try again only when the owner sends such a line.
+   - On each daily reconcile, list the `repos.md` repos still not attached in the same Health problem.
 4. Branch protection: for every repo in `repos.md`, `list_branches` and read whether its PR target and
    release branch are `protected` (one check when they are the same branch). Repeat on each daily reconcile
    and on a Health check.
