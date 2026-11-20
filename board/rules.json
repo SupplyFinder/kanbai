@@ -1,0 +1,25 @@
+{
+  "note": "Capabilities and data rules the board page is published with (republish board.html with these).",
+  "capabilities": {
+    "assets": {},
+    "comments": {},
+    "user": { "scopes": ["profile"] },
+    "db": {
+      "rules": [
+        { "path": "", "read": "view", "write": "admin" },
+        { "path": "ticket_state", "write": "owner" },
+        { "path": "events", "write": "owner" },
+        { "path": "approvals", "write": "owner" },
+        { "path": "config", "write": "owner" },
+        { "path": "approval_votes", "read": "view", "write": "owner" },
+        { "path": "approval_votes/{self}", "read": "view", "write": "interact" },
+        { "path": "settings_requests", "read": "view", "write": "owner" },
+        { "path": "settings_requests/{self}", "read": "view", "write": "interact" },
+        { "path": "logs", "read": "view", "write": "owner" },
+        { "path": "logs/{self}", "read": "view", "write": "interact" },
+        { "path": "backup_index", "write": "owner" },
+        { "path": "backup_snaps", "write": "owner" }
+      ]
+    }
+  }
+}

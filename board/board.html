@@ -1,0 +1,2042 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>KanbAI</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: sticky brand bar with usage strip; horizontally scrolling kanban, one column per stage (each marked by a stage dot); detail, form, settings and permissions open as dialogs.
+     Palette: a green accent on near-neutral greys (replaced by the company colour in Settings → Branding); stage dots and pills use the semantic tones. */
+  :root {
+    --bg: #fbfcfc;
+    --surface: #ffffff;
+    --sunk: #f1f3f4;
+    --fg: #15201d;
+    --muted: #5b6764;
+    --line: #dde3e4;
+    --usage-bg: transparent;
+    --brand: #079759;
+    --accent: #077a49;
+    --accent-soft: #dcf1e5;
+    --accent-fg: #ffffff;
+    --good: #1c7a43;
+    --good-soft: #def2e4;
+    --warn: #96600a;
+    --warn-soft: #f8edd6;
+    --bad: #b0302a;
+    --bad-soft: #f8e2df;
+    --info: #2f5f9e;
+    --info-soft: #e1eaf7;
+    --shadow: 0 1px 2px rgba(19, 32, 25, .06), 0 2px 8px rgba(19, 32, 25, .05);
+    --col-line: transparent;
+    --chart: #077a49;
+    --chart-grid: #e6eaeb;
+    --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1411; --surface: #1b2520; --sunk: #131b17; --fg: #e3ece7; --muted: #95a69d; --line: #2f3e36; --col-line: #222e28;
+      --brand: #34c584; --accent: #4bd394; --accent-soft: #173727; --accent-fg: #06210f;
+      --good: #7cd8a2; --good-soft: #183323; --warn: #ecb862; --warn-soft: #382c14; --bad: #f39a92; --bad-soft: #3f1f1c;
+      --info: #9cc0f2; --info-soft: #1d2d47; --usage-bg: var(--sunk); --chart: #29a86e; --chart-grid: #26332c; --shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 4px 12px rgba(0, 0, 0, .18);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1411; --surface: #1b2520; --sunk: #131b17; --fg: #e3ece7; --muted: #95a69d; --line: #2f3e36; --col-line: #222e28;
+    --brand: #34c584; --accent: #4bd394; --accent-soft: #173727; --accent-fg: #06210f;
+    --good: #7cd8a2; --good-soft: #183323; --warn: #ecb862; --warn-soft: #382c14; --bad: #f39a92; --bad-soft: #3f1f1c;
+    --info: #9cc0f2; --info-soft: #1d2d47; --usage-bg: var(--sunk); --chart: #29a86e; --chart-grid: #26332c; --shadow: 0 1px 2px rgba(0, 0, 0, .25), 0 4px 12px rgba(0, 0, 0, .18);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+  .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  header.bar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface);
+    border-bottom: 1px solid var(--line); padding-block: 12px;
+  }
+  .bar-inner { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 14px; min-width: 0; flex-wrap: wrap; }
+  .brand .logo { height: 26px; width: auto; display: block; }
+  .brand .logo.dark { display: none; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand .logo.light { display: none; } :root:not([data-theme="light"]) .brand .logo.dark { display: block; } }
+  :root[data-theme="dark"] .brand .logo.light { display: none; } :root[data-theme="dark"] .brand .logo.dark { display: block; }
+  .brand .sep { width: 1px; height: 26px; background: var(--line); }
+  .brand-prev { height: 52px; border: 1px solid var(--line); border-radius: 8px; display: flex; align-items: center; padding: 0 12px; }
+  .brand-prev.light-bg { background: #ffffff; } .brand-prev.dark-bg { background: #1b2520; }
+  .brand-prev img { height: 26px; width: auto; max-width: 100%; }
+  div.f { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 500; }
+  div.f .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  @media (max-width: 520px) { .brand .sep { display: none; } .brand { gap: 8px; } }
+  .brand .name { display: grid; gap: 1px; }
+  .brand h1 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+  .brand .sub { color: var(--muted); font-size: 12.5px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .who { font-size: 12px; color: var(--muted); }
+  button, .btn {
+    font: inherit; font-weight: 500; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); font-weight: 600; }
+  button.danger { color: var(--bad); }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .notice { margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+  .notice.bad { background: var(--bad-soft); color: var(--bad); }
+  main { padding-block: 16px 32px; }
+  .board { overflow-x: auto; padding-bottom: 8px; }
+  .cols { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(250px, 1fr); gap: 12px; min-width: min-content; align-items: start; }
+  .col { background: var(--sunk); border: 1px solid var(--col-line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; min-width: 0; }
+  .col h2 { margin: 2px 4px 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .col h2 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .col h2 .dot.accent { background: var(--accent); } .col h2 .dot.info { background: var(--info); } .col h2 .dot.warn { background: var(--warn); }
+  .col h2 .dot.good { background: var(--good); } .col h2 .dot.bad { background: var(--bad); }
+  .col h2 .count { margin-left: auto; font-family: var(--font-mono); font-variant-numeric: tabular-nums; background: var(--surface); color: var(--fg); border-radius: 999px; padding: 0 8px; font-size: 11px; line-height: 18px; }
+  .col .hint { margin: -4px 4px 2px; font-size: 11.5px; color: var(--muted); }
+  .empty-col { color: var(--muted); font-size: 12px; padding: 6px 2px; }
+  .col > .empty-col { padding: 2px 4px 4px; }
+  .col { align-content: start; }
+  .card {
+    text-align: left; width: 100%; display: grid; gap: 6px; padding: 10px 12px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--line); cursor: pointer; font-weight: 400; box-shadow: var(--shadow);
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .card .title { line-height: 1.35; }
+  .prio { display: inline-flex; align-items: center; gap: 5px; }
+  .prio::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--muted); }
+  .prio.high { color: var(--bad); font-weight: 600; } .prio.high::before { background: var(--bad); }
+  .prio.medium::before { background: var(--warn); }
+  .card .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .tid { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .card .title { font-weight: 600; overflow-wrap: anywhere; }
+  .dmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); padding-top: 6px; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+  .who-chip { display: inline-flex; align-items: center; gap: 5px; }
+  .avatar { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0; background: var(--accent-soft); color: var(--accent); }
+  .card .title { font-size: 14.5px; }
+  .card { gap: 8px; padding: 12px 13px; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+  .pill.accent { background: var(--accent-soft); color: var(--accent); }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .pill.info { background: var(--info-soft); color: var(--info); }
+  input.search { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); width: 220px; max-width: 100%; }
+  label.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  label.toggle input { accent-color: var(--accent); }
+  .col.archived { opacity: .8; }
+  .tabs { display: flex; flex-wrap: wrap; flex-shrink: 0; min-height: max-content; gap: 4px; padding: 4px; background: var(--sunk); border-radius: 10px; position: sticky; top: -16px; z-index: 1; box-shadow: 0 -16px 0 var(--surface); }
+  .tab { flex: 1 1 0; justify-content: center; border: 1px solid transparent; border-radius: 7px; background: transparent; padding: 8px 12px; color: var(--muted); font-weight: 500; white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; }
+  .tab:hover { color: var(--fg); }
+  .tab[aria-selected="true"] { color: var(--fg); background: var(--surface); border-color: var(--line); font-weight: 600; }
+  .tab .count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-weight: 400; }
+  .tabpanel { display: grid; gap: 18px; min-width: 0; }
+  .shots { display: grid; gap: 14px; }
+  .shots figure { margin: 0; display: grid; gap: 6px; }
+  .shots img { width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+  .shots figcaption { font-size: 13px; color: var(--muted); }
+  .confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); font-size: 13px; }
+  .empty-board { margin: 40px auto; max-width: 420px; text-align: center; color: var(--muted); display: grid; gap: 12px; justify-items: center; }
+  .empty-board strong { color: var(--fg); font-size: 16px; }
+
+  dialog { border: 1px solid var(--line); border-radius: 12px; padding: 0; background: var(--surface); color: var(--fg); width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+  dialog::backdrop { background: rgba(10, 20, 20, .45); }
+  .dlg { display: grid; grid-template-rows: auto 1fr auto; max-height: calc(100vh - 50px); }
+  .dlg-head { padding: 16px 20px 12px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+  .dlg-head h3 { margin: 2px 0 0; font-size: 18px; text-wrap: balance; overflow-wrap: anywhere; }
+  .dlg-body { padding: 16px 20px; overflow-y: auto; display: grid; grid-auto-rows: max-content; align-content: start; gap: 18px; min-width: 0; min-height: 0; }
+  .dlg-foot { padding: 12px 20px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+  .dlg-foot .msg { font-size: 13px; color: var(--muted); }
+  .foot-left { display: flex; flex-wrap: wrap; gap: 8px; margin-right: auto; }
+  .foot-left:empty { display: none; }
+  .dlg-foot .confirm { flex-basis: 100%; }
+  .x { border: 0; background: transparent; font-size: 20px; line-height: 1; padding: 4px 8px; color: var(--muted); }
+  section.block { display: grid; gap: 8px; min-width: 0; }
+  section.block > h4 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  .md { overflow-wrap: anywhere; min-width: 0; }
+  .md > :first-child { margin-top: 0; } .md > :last-child { margin-bottom: 0; }
+  .md pre { background: var(--sunk); padding: 10px; border-radius: 8px; overflow-x: auto; font-family: var(--font-mono); font-size: 12px; }
+  .md code { font-family: var(--font-mono); font-size: 12.5px; }
+  .md table { border-collapse: collapse; display: block; overflow-x: auto; }
+  .md th, .md td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; }
+  .md h1, .md h2, .md h3 { font-size: 15px; margin: 14px 0 6px; }
+  .questions { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+  .callout { padding: 12px; border-radius: 8px; display: grid; gap: 10px; }
+  .callout.warn { background: var(--warn-soft); }
+  .callout.accent { background: var(--accent-soft); }
+  .callout.bad { background: var(--bad-soft); }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  .events { display: grid; gap: 4px; font-size: 12.5px; }
+  .events div { display: grid; grid-template-columns: 130px 1fr; gap: 10px; }
+  .events time { font-family: var(--font-mono); color: var(--muted); font-size: 11.5px; }
+  .reply { display: grid; gap: 4px; padding: 8px 10px; border-left: 3px solid var(--line); font-size: 13px; }
+  .reply .by { color: var(--muted); font-size: 12px; }
+  .thread { display: grid; gap: 10px; }
+  .comment { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+  .comment.claude { background: var(--accent-soft); border-color: transparent; }
+  .comment .by { color: var(--muted); font-size: 12px; display: flex; flex-wrap: wrap; align-items: center; }
+  .comment .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .composer { gap: 8px; }
+  .row-between { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
+  .composer .msg { font-size: 13px; color: var(--muted); }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .thumbs a, .thumbs .t { display: block; width: 96px; height: 72px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--sunk); position: relative; }
+  .thumbs img { width: 100%; height: 100%; object-fit: cover; }
+  .thumbs .filecard { width: 180px; text-decoration: none; color: var(--fg); }
+  .file { display: flex; align-items: center; gap: 8px; height: 100%; padding: 8px; }
+  .file .ext { flex: none; font-family: var(--font-mono); font-size: 11px; font-weight: 600; padding: 4px 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); }
+  .file .fname { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .thumbs .rm { position: absolute; top: 2px; right: 2px; padding: 0 6px; font-size: 12px; border-radius: 6px; }
+  label.f { display: grid; gap: 4px; font-size: 13px; font-weight: 500; min-width: 0; }
+  label.f span.hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  input[type=text], textarea, select { font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); width: 100%; min-width: 0; }
+  textarea { resize: vertical; min-height: 90px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row2 { grid-template-columns: 1fr; } .events div { grid-template-columns: 1fr; } }
+  .settings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .settings-wrap { overflow-x: auto; }
+  .settings-table th, .settings-table td { text-align: left; padding: 6px; border-bottom: 1px solid var(--line); }
+  .settings-table input, .settings-table select { padding: 6px 8px; }
+  .settings-table input.num { width: 80px; }
+  .usage { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--muted); background: var(--usage-bg); border-radius: 10px; padding: 6px 12px; width: fit-content; max-width: 100%; }
+  .usage strong { color: var(--fg); font-weight: 600; }
+  .usage .meter { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .usage .track { width: 90px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .usage .fill { display: block; height: 100%; background: var(--accent); }
+  .usage .fill.warn { background: var(--warn); } .usage .fill.bad { background: var(--bad); }
+  .usage .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg); }
+  .usage button { padding: 4px 10px; font-size: 12.5px; }
+  .usage .held { color: var(--warn); font-weight: 600; }
+  .health-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 12.5px; }
+  .health-chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .health-chip .dot.good { background: var(--good); } .health-chip .dot.warn { background: var(--warn); } .health-chip .dot.bad { background: var(--bad); }
+  .problems { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+  @media (prefers-reduced-motion: no-preference) { .card { transition: border-color .12s ease, transform .12s ease, box-shadow .12s ease; } }
+  @media (prefers-reduced-motion: reduce) { .card:hover { transform: none; } }
+  .board { scrollbar-color: var(--line) transparent; }
+  a { color: var(--accent); }
+  /* Credit line, bottom right of the page (part of the template, separate from the company's own Branding). */
+  .credit { display: flex; justify-content: flex-end; padding-block: 0 20px; }
+  .credit a { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); text-decoration: none; padding: 4px 8px; border-radius: 8px; }
+  .credit a:hover { color: var(--fg); background: var(--sunk); }
+  .credit img { display: block; }
+  .credit strong { font-weight: 600; color: var(--fg); }
+  dialog.wide { width: min(980px, calc(100vw - 32px)); }
+  details.menu { position: relative; }
+  details.menu > summary { list-style: none; cursor: pointer; font-weight: 500; border-radius: 8px; padding: 8px 14px; border: 1px solid var(--line); background: var(--surface); }
+  details.menu > summary::-webkit-details-marker { display: none; }
+  details.menu > summary::after { content: " ▾"; color: var(--muted); }
+  details.menu > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .menu-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 190px; display: grid; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+  .menu-pop button { border: 0; text-align: left; padding: 8px 10px; background: transparent; }
+  .menu-pop button:hover { background: var(--sunk); }
+  .bk { display: grid; grid-template-columns: 210px 1fr; gap: 16px; min-width: 0; }
+  @media (max-width: 720px) { .bk { grid-template-columns: 1fr; } }
+  .bk-days { display: grid; gap: 4px; align-content: start; }
+  .bk-days button { text-align: left; padding: 8px 10px; font-size: 13px; display: grid; gap: 1px; }
+  .bk-days button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .bk-days .sub { font-size: 11.5px; color: var(--muted); font-weight: 400; }
+  .diff-changed { color: var(--warn); font-weight: 600; } .diff-deleted { color: var(--bad); font-weight: 600; } .diff-new { color: var(--info); font-weight: 600; } .diff-same { color: var(--muted); }
+  .preview { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; }
+  .ldiff { font-family: var(--font-mono); font-size: 12px; border-radius: 8px; overflow-x: auto; background: var(--surface); border: 1px solid var(--line); }
+  .ldiff div { padding: 1px 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .ldiff .del { background: var(--bad-soft); color: var(--bad); }
+  .ldiff .add { background: var(--good-soft); color: var(--good); }
+  .ldiff .ctx { color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+  .tile { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile .sub { font-size: 12px; color: var(--muted); }
+  .chart { width: 100%; height: auto; display: block; }
+  .chart text { fill: var(--muted); font-size: 11px; font-family: var(--font-body); }
+  .chart .val { fill: var(--fg); font-weight: 600; }
+  .chart .grid { stroke: var(--chart-grid); stroke-width: 1; }
+  .chart .bar { fill: var(--chart); }
+  .chart .bar:hover { opacity: .8; }
+  .rtable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rtable th, .rtable td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  .rtable td.num, .rtable th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 720px) { .rgrid { grid-template-columns: 1fr; } }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 12px; font-size: 12.5px; color: var(--muted); }
+  .filters .fl { display: inline-flex; align-items: center; gap: 6px; }
+  .filters select { width: auto; padding: 5px 8px; font-size: 12.5px; }
+  .filters button { padding: 5px 10px; font-size: 12.5px; }
+  .fl-count { margin-left: auto; }
+</style>
+
+<header class="bar wrap">
+  <div class="bar-inner">
+    <div class="brand">
+      <img class="logo light" alt="" hidden>
+      <img class="logo dark" alt="" hidden>
+      <span class="sep" aria-hidden="true" hidden></span>
+      <div class="name"><h1>KanbAI</h1><span class="sub" id="brand-sub">From request to draft PRs</span></div>
+    </div>
+    <div class="actions">
+      <span class="who" id="who"></span>
+      <input type="search" id="search" class="search" placeholder="Search tickets" aria-label="Search tickets by id, title, description or author">
+      <label class="toggle"><input type="checkbox" id="show-archived"> Show archived</label>
+      <button type="button" id="btn-reports">Reports</button>
+      <details class="menu" id="more-menu">
+        <summary>More</summary>
+        <div class="menu-pop" role="menu">
+          <button type="button" id="btn-theme" role="menuitem" aria-label="Switch theme">Theme: System</button>
+          <button type="button" id="btn-backups" role="menuitem" hidden>Backups</button>
+          <button type="button" id="btn-perms" role="menuitem" hidden>Permissions</button>
+          <button type="button" id="btn-settings" role="menuitem" hidden>Settings</button>
+        </div>
+      </details>
+      <button type="button" class="primary" id="btn-new" disabled>New ticket</button>
+    </div>
+  </div>
+  <div id="notice" class="notice" hidden></div>
+  <div id="usage-bar" class="usage" aria-label="Account usage"></div>
+</header>
+
+<main class="wrap">
+  <div class="filters" role="group" aria-label="Filter tickets">
+    <label class="fl">Show <select id="fl-who"><option value="">All tickets</option><option value="mine">Mine</option><option value="waiting">Waiting for me</option></select></label>
+    <label class="fl">Repo <select id="fl-repo"><option value="">Any</option></select></label>
+    <label class="fl">Author <select id="fl-author"><option value="">Anyone</option></select></label>
+    <label class="fl">Type <select id="fl-type"><option value="">Any</option><option value="feature">Feature</option><option value="bug">Bug</option><option value="improvement">Improvement</option></select></label>
+    <label class="fl">Created <select id="fl-age"><option value="">Any time</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option></select></label>
+    <span class="fl-count" id="fl-count" role="status"></span>
+    <button type="button" id="fl-clear" hidden>Clear filters</button>
+  </div>
+  <div class="board"><div class="cols" id="cols"></div></div>
+  <div class="empty-board" id="empty" hidden>
+    <strong>No tickets yet</strong>
+    <div>Create a ticket, then submit it: Claude investigates the repos and data, asks questions if needed, and writes a plan for <span class="owner-name">the owner</span> or an approver to approve.</div>
+  </div>
+</main>
+
+<footer class="credit wrap">
+  <a href="https://supply-finder.com" target="_blank" rel="noopener" aria-label="Made by Supply Finder (opens supply-finder.com)">
+    <span>Made by</span><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAAkCAYAAAAQC8MVAAAD4klEQVR42tWYT2gdVRTGf9+dfy9J0yoItWB3gtKAoDs3RleudGXShgoiomIrKArdFHl94kKQdqGmXVSwC1GTLEQ3dSMScFdqBW0RcSHiQlPREJv43sy997h4ecGqtJ2X92J6htkMM+d898z5zvnuFXWt2XS0WjE7dWBaLnlZMd4LZAzPDElmcUX9AC3enn6NseIowaAKbIlJ3DjY+amE6YWQz848ovH8E1argEUhObbIbjzQxX3WXSEv4c3AbCuBdkPfYNUgjHceHc/L0e+UJrfjY/fpFlq9zFiRAQn/k7ka+Rc/7VuWtESiiIjbEywYzcmEViua8Z6KzGEEwLZfzfbeNeDEVCMfzT7TzuJ+Vtqsg94CpKZ6BOkR7d0nbsmr6rikGVI3wrB5JqCKiPmpeoS5uCRaix4gP3nwLhK7x3wscLq6JILFq5/JIetvVSYns2VuJlNjdmYyYjuQi8SaK3fRYU4bzSx0G1uULfn28le88GmH5lQOS7HYvecBS5Id3YzXiBOA1EnRr6g4fdBIXJfXmy29ng8fwelrq3yzfO7DjzBUnJp5nVtHj3ClA4n68BlQcXImIhtsCzKJIhGJgyudJzvPz53h88m0+HbPl2TpBKUPqMZwMUCS645MuYHeQpTBUwazxL3ZmN2/l4cWvUWdIUscUr2YXQ0yVCGS4kPQWD4enR4DFJ3/gnZFvyN7uKpJQoYh7gQsDdkvhLiKk7D6029LJJ5MHsCic1j/Qmi4YM0wUEQXMBTS6g7ytEGwvuSlw4Z0RatoZKmtdn6sjI8RpqiHyRMDfD8+U1InBty5EFDkGWVYcdjjHHr/d04f2K2gZ6iCcMpq51UiNR9/k6wAGWbaJKEMTOa0qo5fjGvVq9WL898Aykt7RSPZTtrVSq1u0PMJq2kZ/UQjI8e7/tKbRplIoIB2BwrnyjSs8NTC5fWNZs7FpagQj9MOJ0jDepzib046QIHKGFGIVFFk63jMIM3Vabf/vLmEDIY41uz/949eGMt3jT0NGida3NC8/yKCurH+E0U0shTafq789e7vmbikjd10z461NlGjvZOZt6bvc7tGz2szO5xgMN4gLv1xpDz0wRs0J9OeZr56JA7C1kpvm+soHqcUo7z2/B6UDhiEj+vsJNw2Y9BNA9Z0nTLYJmDNUXoF4vku8x+M2xOsWUUjd1aFc/42O0ez6VBrSGATZ5jVlyVYxMxTZBk+ljFJDjO9EJi4pKGx2AIJI4mINVuXk0idsyr8oNI/6w/PdbM63QqDOD765+8TkjVm9+81586a2TgoXNenMMwccpctcWez5c7JtSMLP/cOq6/16V94RheB/0NmMwAAAABJRU5ErkJggg==" alt="" width="17" height="14"><strong>Supply Finder</strong>
+  </a>
+</footer>
+
+<dialog id="dlg-form" aria-labelledby="form-title">
+  <form class="dlg" id="form" novalidate>
+    <div class="dlg-head">
+      <div><div class="tid" id="form-id">New ticket</div><h3 id="form-title">Describe the request</h3></div>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body">
+      <label class="f">Title<input type="text" id="f-title" maxlength="140" required placeholder="Add a category filter to the domain export"></label>
+      <div class="row2">
+        <label class="f">Type
+          <select id="f-type"><option value="feature">Feature</option><option value="bug">Bug</option><option value="improvement">Improvement</option></select>
+        </label>
+        <label class="f">Priority
+          <select id="f-priority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select>
+        </label>
+      </div>
+      <label class="f">Description <span class="hint">What should change, for whom, and what you expect to see. Plain language is fine.</span>
+        <textarea id="f-desc" rows="8" required></textarea>
+      </label>
+      <div class="f">
+        <label class="f" for="f-files">Attachments <span class="hint">Screenshots, PDF, CSV, text, Markdown or JSON, up to 20 MB each.</span></label>
+        <input type="file" id="f-files" accept="image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json" multiple>
+        <div class="thumbs" id="f-thumbs"></div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="f-shots"> Add screenshots to the PRs when possible <span class="hint" style="color:var(--muted)">(visible UI changes only; takes longer)</span></label>
+      <label class="toggle"><input type="checkbox" id="f-review"> Claude reviews the PRs before you <span class="hint" style="color:var(--muted)">(an extra review session after the PRs open; uses more usage)</span></label>
+    </div>
+    <div class="dlg-foot">
+      <span class="msg" id="form-msg" role="status"></span>
+      <button type="button" data-close>Cancel</button>
+      <button type="button" id="f-save">Save draft</button>
+      <button type="submit" class="primary" id="f-submit">Submit to Claude</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlg-detail" aria-labelledby="d-title">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><div class="tid" id="d-id"></div><h3 id="d-title"></h3><div class="dmeta" id="d-meta"></div></div>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body" id="d-body"></div>
+    <div class="dlg-foot" id="d-foot"></div>
+  </div>
+</dialog>
+
+<dialog id="dlg-reports" aria-labelledby="r-title" class="wide">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><div class="tid">From the board's data</div><h3 id="r-title">Reports</h3></div>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body" id="r-body"></div>
+  </div>
+</dialog>
+
+<dialog id="dlg-backups" aria-labelledby="k-title" class="wide">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><div class="tid">Owner only</div><h3 id="k-title">Backups</h3></div>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body" id="k-body"></div>
+    <div class="dlg-foot" id="k-foot"></div>
+  </div>
+</dialog>
+
+<dialog id="dlg-health" aria-labelledby="h-title">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><div class="tid">Pipeline</div><h3 id="h-title">Health</h3></div>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body" id="h-body"></div>
+    <div class="dlg-foot">
+      <span class="msg" id="h-msg" role="status"></span>
+      <button type="button" data-close>Close</button>
+      <button type="button" class="primary" id="h-run">Run a check now</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg-perms" aria-labelledby="p-title">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><div class="tid">Admins only</div><h3 id="p-title">Permissions</h3></div>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body">
+      <p style="margin:0;color:var(--muted)">People appear here once they have opened the board. New people can submit tickets until you untick them. Approvers can approve plans, request changes and click Continue. Admins can open Settings and Permissions. Every session still runs on the orchestrator owner's account, and the owner is told in Slack when roles or settings change.</p>
+      <div class="settings-wrap">
+        <table class="settings-table">
+          <thead><tr><th>Person</th><th>Submitter</th><th>Approver</th><th>Admin</th><th>Last seen</th></tr></thead>
+          <tbody id="p-rows"></tbody>
+        </table>
+      </div>
+      <section class="block"><h4>Recent permission and settings changes</h4><div class="events" id="p-log"><div class="empty-col">Loading…</div></div></section>
+    </div>
+    <div class="dlg-foot">
+      <span class="msg" id="p-msg" role="status"></span>
+      <button type="button" data-close>Cancel</button>
+      <button type="button" class="primary" id="p-save">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg-settings" aria-labelledby="s-title">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><div class="tid">Admins only</div><h3 id="s-title">Models and limits</h3></div>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <div class="dlg-body">
+      <p style="margin:0;color:var(--muted)">The orchestrator reads these on every wake. Changes apply to the next session it starts.</p>
+      <div class="settings-wrap">
+        <table class="settings-table">
+          <thead><tr><th>Stage</th><th>Model</th><th>Effort</th><th>Time cap (min)</th></tr></thead>
+          <tbody id="s-rows"></tbody>
+        </table>
+      </div>
+      <div class="row2">
+        <label class="f">Coding sessions at once<input type="text" inputmode="numeric" id="s-parallel"></label>
+        <label class="f">Hold new sessions above usage (%) <span class="hint">Account usage, 5-hour or weekly. Running sessions finish; new ones wait and start when usage drops. Empty or 0 = off.</span><input type="text" inputmode="numeric" id="s-usage" placeholder="75"></label>
+      </div>
+      <section class="block" aria-labelledby="c-title">
+        <h4 id="c-title">Company</h4>
+        <div id="c-body"></div>
+      </section>
+      <section class="block" aria-labelledby="b-title">
+        <h4 id="b-title">Branding</h4>
+        <div class="row2">
+          <div class="f">
+            <span>Logo <span class="hint">for light backgrounds; PNG or SVG, shown 26px high</span></span>
+            <div class="brand-prev light-bg"><img id="b-prev-light" alt="Logo preview"></div>
+            <div class="actions"><input type="file" id="b-logo-light" accept="image/png,image/svg+xml,image/jpeg,image/webp" aria-label="Upload logo"><button type="button" id="b-clear-light">Use default</button></div>
+          </div>
+          <div class="f">
+            <span>Logo for dark mode <span class="hint">optional; light text on a transparent background</span></span>
+            <div class="brand-prev dark-bg"><img id="b-prev-dark" alt="Dark mode logo preview"></div>
+            <div class="actions"><input type="file" id="b-logo-dark" accept="image/png,image/svg+xml,image/jpeg,image/webp" aria-label="Upload dark mode logo"><button type="button" id="b-clear-dark">Use default</button></div>
+          </div>
+        </div>
+        <div class="actions">
+          <label class="f" style="grid-auto-flow:column;align-items:center;justify-content:start;gap:8px">Main colour <input type="color" id="b-accent" aria-label="Main colour"></label>
+          <input type="text" id="b-accent-hex" class="num" style="width:110px" aria-label="Main colour hex" placeholder="#079759">
+          <button type="button" id="b-reset">Reset to default</button>
+        </div>
+        <span class="hint" id="b-msg" role="status" style="color:var(--muted);font-size:12px"></span>
+      </section>
+    </div>
+    <div class="dlg-foot">
+      <span class="msg" id="s-msg" role="status"></span>
+      <button type="button" data-close>Cancel</button>
+      <button type="button" class="primary" id="s-save">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const h = (tag, attrs, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const kid of kids.flat()) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : String(kid));
+    return el;
+  };
+  const md = (text) => {
+    const box = h('div', { class: 'md' });
+    try { box.innerHTML = window.DOMPurify.sanitize(window.marked.parse(text || '')); }
+    catch (_) { box.textContent = text || ''; }
+    return box;
+  };
+  const fmt = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); };
+  const nowIso = () => new Date().toISOString();
+  // Change log: each person writes entries only under logs/<their id>/entries (a path only they can write),
+  // so the author of an entry can't be faked. Never blocks the action it records.
+  async function logChange(ticket, action, detail) {
+    try {
+      if (!state.db || !state.me || !state.me.id) return;
+      await state.db.collection('logs/' + state.me.id + '/entries').add({ ticket: ticket || null, action, detail: detail || '', at: nowIso() });
+    } catch (_) { /* the change itself already happened */ }
+  }
+  const stamp = () => ({ updated_at: nowIso(), updated_by: (state.me && state.me.id) || null });
+
+  const PAUSED = ['AI paused – needs decision', 'AI paused – limit reached', 'AI failed'];
+  const COLS = [
+    { label: 'Draft', statuses: ['Draft'], dot: '', hint: 'Not submitted yet' },
+    { label: 'With Claude', statuses: ['Submitted', 'Investigating'], dot: 'info', hint: 'Claude is writing the plan' },
+    { label: 'Needs info', statuses: ['Needs info'], dot: 'warn', hint: 'The author answers Claude' },
+    { label: 'Plan ready', statuses: ['Plan ready'], dot: 'warn', hint: 'Waiting for approval' },
+    { label: 'Coding', statuses: ['Approved', 'Queued', 'Coding'], dot: 'accent', hint: 'Approved, Claude is coding' },
+    { label: 'PR open', statuses: ['Reviewing', 'PR open'], dot: 'good', hint: 'Draft PRs to review and merge' },
+    { label: 'Done', statuses: ['Done'], dot: 'good', hint: 'Merged' },
+    { label: 'Paused', statuses: PAUSED, dot: 'bad', hint: 'Needs a decision, then Continue' },
+  ];
+  const TONE = { 'Needs info': 'warn', 'Plan ready': 'warn', 'Approved': 'accent', 'Queued': 'accent', 'Coding': 'accent', 'Investigating': 'info', 'Submitted': 'info', 'PR open': 'good', 'Done': 'good' };
+  PAUSED.forEach((s) => { TONE[s] = 'bad'; });
+  // Usage hold: the orchestrator did not start a session because account usage is above the limit in Settings.
+  const WAIT = 'Waiting – usage limit';
+  TONE[WAIT] = 'warn';
+  TONE['Reviewing'] = 'accent';
+  // PR status, written by the coding session and the orchestrator into ticket_state.pr_status[side]:
+  // { state: draft|open|merged|closed, ci: pending|passing|failing|none, review: none|requested|approved|changes_requested, mergeable: true|false|null, at }
+  const PR_ISSUES = [
+    ['bad', 'Conflict', (p) => p.mergeable === false],
+    ['bad', 'CI failing', (p) => p.ci === 'failing'],
+    ['warn', 'Changes requested', (p) => p.review === 'changes_requested'],
+    ['accent', 'CI running', (p) => p.ci === 'pending'],
+    ['good', 'Approved', (p) => p.review === 'approved'],
+    ['good', 'CI passing', (p) => p.ci === 'passing'],
+  ];
+  function prPills(p) {
+    if (!p) return [];
+    if (p.state === 'merged') return [['good', 'merged']];
+    if (p.state === 'closed') return [['', 'closed']];
+    const out = PR_ISSUES.filter(([, , f]) => f(p)).map(([tone, label]) => [tone, label]);
+    if (p.state === 'draft') out.push(['', 'draft']);
+    return out;
+  }
+  // The card shows the most urgent PR signals across the ticket's open PRs (at most 2).
+  function cardPrPills(s) {
+    const seen = new Map();
+    for (const side of Object.keys(s.prs || {})) {
+      if ((s.merged || []).includes(side)) continue;
+      for (const [tone, label] of prPills((s.pr_status || {})[side])) if (label !== 'draft' && !seen.has(label)) seen.set(label, tone);
+    }
+    const order = PR_ISSUES.map(([, l]) => l);
+    return [...seen.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0])).slice(0, 2).map(([label, tone]) => [tone, label]);
+  }
+  const PRIO = { high: 0, medium: 1, low: 2 };
+  // Company settings, written by the orchestrator from the company repo (ai-tickets/config.yml + repos.md):
+  // config/company = { name, owner_name, prefix, timezone, repos: [{key, label, repo, pr_target, release}], … }
+  const companyRepos = () => {
+    const c = state.company && Array.isArray(state.company.repos) ? state.company.repos : [];
+    if (c.length) return c;
+    // Before the orchestrator has written them: the keys used by tickets, labelled from the key.
+    const keys = new Set(); for (const s of state.st.values()) for (const k of (s.scope || [])) keys.add(k);
+    return [...keys].sort().map((key) => ({ key, label: keyLabel(key) }));
+  };
+  const keyLabel = (key) => String(key || '').replace(/[_-]+/g, ' ').replace(/^./, (x) => x.toUpperCase());
+  const repoLabel = (key) => ((companyRepos().find((r) => r.key === key) || {}).label) || keyLabel(key);
+  const ownerName = () => (state.company && state.company.owner_name) || 'the owner';
+  function fillRepoFilter() {
+    const sel = $('fl-repo'); const cur = sel.value;
+    const repos = companyRepos();
+    sel.replaceChildren(h('option', { value: '' }, 'Any'), ...repos.map((r) => h('option', { value: r.key }, r.label || keyLabel(r.key))));
+    sel.value = repos.some((r) => r.key === cur) ? cur : '';
+  }
+  function applyCompany() {
+    const c = state.company || {};
+    $('brand-sub').textContent = c.name ? c.name + ' · from request to draft PRs' : 'From request to draft PRs';
+    document.querySelectorAll('.owner-name').forEach((el) => { el.textContent = ownerName(); });
+    fillRepoFilter();
+  }
+  const STAGES = [
+    { key: 'orchestrator', label: 'Orchestrator', cap: false },
+    { key: 'planning', label: 'Planning', cap: true },
+    { key: 'coding', label: 'Coding', cap: true },
+    { key: 'review', label: 'Claude review (when ticked)', cap: true },
+    { key: 'workers', label: 'Workers (inside coding)', cap: false, alias: true },
+  ];
+
+  const state = { db: null, user: null, comments: null, assets: null, me: null, owner: false, canWrite: false,
+    tickets: new Map(), st: new Map(), approvals: new Map(), events: [], config: null, runtime: null, roles: null, branding: null, company: null, votes: new Map(), myRequest: null, people: [], names: {}, loaded: false };
+
+  // Roles live in config/roles = { people: { <user id>: { submitter, approver } } }, written by the owner.
+  // Someone with no entry is a submitter (the default), not an approver, not an admin. The owner is always all three.
+  // The buttons follow these roles; the orchestrator checks them again before acting.
+  const roleOf = (uid) => {
+    const r = (state.roles && state.roles.people && state.roles.people[uid]) || {};
+    return { submitter: r.submitter !== false, approver: r.approver === true, admin: r.admin === true };
+  };
+  const isAdmin = () => state.owner || (!!(state.me && state.me.id) && roleOf(state.me.id).admin);
+  const canSubmit = () => state.owner || (!!(state.me && state.me.id) && roleOf(state.me.id).submitter);
+  const canApprove = () => state.owner || (!!(state.me && state.me.id) && roleOf(state.me.id).approver);
+
+  function notice(text, bad) {
+    const n = $('notice');
+    if (!text) { n.hidden = true; return; }
+    n.textContent = text; n.className = 'notice' + (bad ? ' bad' : ''); n.hidden = false;
+  }
+
+  function statusOf(id) {
+    const t = state.tickets.get(id) || {};
+    const s = state.st.get(id);
+    if (s && s.status) {
+      if (s.status === 'Plan ready' && approvalValid(id)) return 'Approved';
+      return s.status;
+    }
+    return t.submitted_at ? 'Submitted' : 'Draft';
+  }
+  // An approval counts when the owner's approvals/<id> matches the plan revision, or when someone ticked
+  // as Approver (or the owner) voted for this revision under approval_votes/<their id>, a path only they
+  // can write. The orchestrator checks the same thing before coding.
+  const ownerIdKnown = () => (state.owner && state.me && state.me.id) || ((state.people.find((p) => p.owner) || {}).id || null);
+  function approvalBy(id) {
+    const s = state.st.get(id); if (!s) return null;
+    const a = state.approvals.get(id);
+    if (a && a.plan_rev === s.plan_rev) return a.approved_by || ownerIdKnown();
+    for (const [uid, v] of state.votes) {
+      const vote = v && v[id];
+      if (vote && vote.plan_rev === s.plan_rev && (uid === ownerIdKnown() || roleOf(uid).approver)) return uid;
+    }
+    return null;
+  }
+  function approvalValid(id) { return !!approvalBy(id); }
+  const nameOf = (uid) => (uid && state.names[uid]) || 'Someone';
+
+  async function resolveNames(ids) {
+    const need = [...new Set(ids.filter((x) => x && !(x in state.names)))];
+    if (!need.length || !state.user || !state.user.profiles) return;
+    try {
+      const ps = await state.user.profiles(need);
+      for (const id of need) state.names[id] = (ps && ps[id] && ps[id].name) || '';
+      fillAuthorFilter(); render();
+    } catch (_) { /* names stay generic */ }
+  }
+
+  // ---------- reports (computed in the page from tickets, state and Claude's events) ----------
+  const DAY = 86400000;
+  const fmtDays = (d) => (d == null || !isFinite(d) ? '—' : d < 1 ? Math.max(1, Math.round(d * 24)) + ' h' : (Math.round(d * 10) / 10) + ' d');
+  const median = (xs) => { const a = xs.filter((x) => x != null && isFinite(x)).sort((x, y) => x - y); if (!a.length) return null; const m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+  function ticketTimes(id) {
+    const ev = state.events.filter((e) => e.ticket === id).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const first = (k) => { const e = ev.find((x) => x.kind === k); return e ? new Date(e.at).getTime() : null; };
+    const t = state.tickets.get(id) || {}; const s = state.st.get(id) || {};
+    const submitted = t.submitted_at ? new Date(t.submitted_at).getTime() : first('submitted');
+    const done = first('done') || (statusOf(id) === 'Done' && s.status_at ? new Date(s.status_at).getTime() : null);
+    return { submitted, plan: first('plan'), approved: first('approved') || first('coding'), pr: first('pr'), done };
+  }
+  // SVG column chart, one series: weeks along x, count up y. Bars capped at 24px, 4px rounded tops, value on the cap.
+  function columnChart(points, label) {
+    const W = 440, H = 170, L = 28, R = 8, T = 18, B = 26;
+    const max = Math.max(1, ...points.map((p) => p.v)); const step = Math.max(1, Math.ceil(max / 4));
+    const top = step * Math.ceil(max / step);
+    const x = (i) => L + (i + 0.5) * ((W - L - R) / points.length);
+    const y = (v) => T + (H - T - B) * (1 - v / top);
+    const bw = Math.min(24, ((W - L - R) / points.length) * 0.6);
+    const parts = [];
+    for (let v = 0; v <= top; v += step) parts.push('<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + v + '</text>');
+    points.forEach((p, i) => {
+      const h0 = y(0) - y(p.v); const r = Math.min(4, h0);
+      if (p.v > 0) parts.push('<path class="bar" d="M' + (x(i) - bw / 2) + ',' + y(0) + 'V' + (y(p.v) + r) + 'q0,-' + r + ' ' + r + ',-' + r + 'H' + (x(i) + bw / 2 - r) + 'q' + r + ',0 ' + r + ',' + r + 'V' + y(0) + 'Z"><title>' + p.label + ': ' + p.v + '</title></path>'
+        + '<text class="val" x="' + x(i) + '" y="' + (y(p.v) - 5) + '" text-anchor="middle">' + p.v + '</text>');
+      parts.push('<text x="' + x(i) + '" y="' + (H - 8) + '" text-anchor="middle">' + p.short + '</text>');
+    });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('class', 'chart'); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label);
+    svg.innerHTML = parts.join(''); return svg;
+  }
+  // SVG horizontal bars, one series: a stage per row, median days, value at the tip.
+  function barChart(rows, label) {
+    const W = 440, rowH = 30, L = 150, R = 50, H = rows.length * rowH + 8;
+    const max = Math.max(0.01, ...rows.map((r) => r.v || 0));
+    const parts = [];
+    rows.forEach((r, i) => {
+      const yy = 4 + i * rowH; const w = r.v ? Math.max(2, (W - L - R) * r.v / max) : 0; const bh = 14; const rad = Math.min(4, w);
+      parts.push('<text x="' + (L - 8) + '" y="' + (yy + 15) + '" text-anchor="end">' + r.label + '</text>');
+      if (w) parts.push('<path class="bar" d="M' + L + ',' + (yy + 4) + 'H' + (L + w - rad) + 'q' + rad + ',0 ' + rad + ',' + rad + 'V' + (yy + 4 + bh - rad) + 'q0,' + rad + ' -' + rad + ',' + rad + 'H' + L + 'Z"><title>' + r.label + ': ' + fmtDays(r.v) + ' (' + r.n + ' tickets)</title></path>');
+      parts.push('<text class="val" x="' + (L + w + 6) + '" y="' + (yy + 15) + '">' + (r.v == null ? 'no data' : fmtDays(r.v)) + '</text>');
+    });
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.setAttribute('class', 'chart'); svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', label);
+    svg.innerHTML = parts.join(''); return svg;
+  }
+  function openReports() { renderReports(); $('dlg-reports').showModal(); }
+  function renderReports() {
+    const ids = [...state.tickets.keys()];
+    const times = Object.fromEntries(ids.map((id) => [id, ticketTimes(id)]));
+    const now = Date.now();
+    // Done per week, last 8 weeks (weeks start Monday).
+    const monday = (ts) => { const d = new Date(ts); const day = (d.getDay() + 6) % 7; d.setHours(0, 0, 0, 0); return d.getTime() - day * DAY; };
+    const thisWeek = monday(now);
+    const weeks = Array.from({ length: 8 }, (_, i) => thisWeek - (7 - i) * 7 * DAY);
+    const perWeek = weeks.map((w) => ({ w, v: ids.filter((id) => times[id].done && monday(times[id].done) === w).length }));
+    const points = perWeek.map((p) => { const d = new Date(p.w); return { v: p.v, label: 'Week of ' + d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), short: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) }; });
+    // Request to merge, last 90 days.
+    const recentDone = ids.filter((id) => times[id].done && now - times[id].done < 90 * DAY);
+    const leadTimes = recentDone.map((id) => times[id].submitted && (times[id].done - times[id].submitted) / DAY).filter((x) => x != null);
+    // Time per stage (median days, tickets that passed through each stage).
+    const span = (a, b) => ids.map((id) => (times[id][a] && times[id][b] && times[id][b] >= times[id][a] ? (times[id][b] - times[id][a]) / DAY : null)).filter((x) => x != null);
+    const stages = [
+      { label: 'Planning', xs: span('submitted', 'plan') },
+      { label: 'Waiting for approval', xs: span('plan', 'approved') },
+      { label: 'Coding', xs: span('approved', 'pr') },
+      { label: 'Review and merge', xs: span('pr', 'done') },
+    ].map((x) => ({ label: x.label, v: median(x.xs), n: x.xs.length }));
+    // Usage per ticket: 5-hour points used between each stage's start and end.
+    const usageRows = ids.map((id) => {
+      const u = (state.st.get(id) || {}).usage || {}; let total = 0; let any = false;
+      for (const k of ['planning', 'coding', 'review']) { const x = u[k]; if (x && x.start && x.end && typeof x.start.five_hour === 'number' && typeof x.end.five_hour === 'number') { total += Math.max(0, x.end.five_hour - x.start.five_hour); any = true; } }
+      return any ? { id, total } : null;
+    }).filter(Boolean).sort((a, b) => b.total - a.total).slice(0, 8);
+    // Longest current waits: open tickets by time in their current status.
+    const waits = ids.filter((id) => !isArchived(id) && !['Done', 'Draft'].includes(statusOf(id)))
+      .map((id) => { const s = state.st.get(id) || {}; const t = state.tickets.get(id); const since = s.status_at || t.submitted_at || t.created_at; return { id, status: statusOf(id), d: since ? (now - new Date(since)) / DAY : null }; })
+      .filter((x) => x.d != null).sort((a, b) => b.d - a.d).slice(0, 6);
+    const doneLast30 = ids.filter((id) => times[id].done && now - times[id].done < 30 * DAY).length;
+    const open = ids.filter((id) => !isArchived(id) && !['Done', 'Draft'].includes(statusOf(id))).length;
+    const tile = (label, value, sub) => h('div', { class: 'tile' }, h('span', { class: 'label' }, label), h('span', { class: 'value' }, value), sub ? h('span', { class: 'sub' }, sub) : null);
+    const table = (head, rows) => h('div', { class: 'settings-wrap' }, h('table', { class: 'rtable' }, h('thead', null, h('tr', null, head.map(([t, num]) => h('th', { class: num ? 'num' : null }, t)))), h('tbody', null, rows)));
+    $('r-body').replaceChildren(
+      h('div', { class: 'tiles' },
+        tile('Done in the last 30 days', String(doneLast30)),
+        tile('Request to merge (median)', fmtDays(median(leadTimes)), leadTimes.length ? 'over ' + leadTimes.length + ' tickets, last 90 days' : 'no merged tickets yet'),
+        tile('Open tickets', String(open), 'submitted, not done'),
+        tile('Waiting for approval', String(ids.filter((id) => statusOf(id) === 'Plan ready').length))),
+      h('div', { class: 'rgrid' },
+        h('section', { class: 'block' }, h('h4', null, 'Tickets done per week'), columnChart(points, 'Tickets done per week, last 8 weeks'),
+          table([['Week'], ['Done', true]], points.map((p) => h('tr', null, h('td', null, p.label), h('td', { class: 'num' }, String(p.v)))))),
+        h('section', { class: 'block' }, h('h4', null, 'Time per stage (median)'), barChart(stages, 'Median time per stage'),
+          table([['Stage'], ['Median', true], ['Tickets', true]], stages.map((r) => h('tr', null, h('td', null, r.label), h('td', { class: 'num' }, fmtDays(r.v)), h('td', { class: 'num' }, String(r.n))))))),
+      h('div', { class: 'rgrid' },
+        h('section', { class: 'block' }, h('h4', null, 'Usage per ticket'), h('div', { class: 'empty-col' }, 'Points of the 5-hour usage limit used while its sessions ran (account-wide, so it includes other work at the same time).'),
+          usageRows.length ? table([['Ticket'], ['5-hour points', true]], usageRows.map((r) => h('tr', null, h('td', null, r.id + ' · ' + ((state.tickets.get(r.id) || {}).title || '').slice(0, 40)), h('td', { class: 'num' }, String(Math.round(r.total)))))) : h('div', { class: 'empty-col' }, 'No usage recorded yet.')),
+        h('section', { class: 'block' }, h('h4', null, 'Longest waits right now'),
+          waits.length ? table([['Ticket'], ['Status'], ['For', true]], waits.map((w) => h('tr', null, h('td', null, w.id + ' · ' + ((state.tickets.get(w.id) || {}).title || '').slice(0, 34)), h('td', null, w.status), h('td', { class: 'num' }, fmtDays(w.d))))) : h('div', { class: 'empty-col' }, 'Nothing waiting.'))));
+  }
+
+  // ---------- backups (owner only) ----------
+  // The orchestrator backs up every ticket daily to GitHub, and also writes the last 30 days here:
+  //   backup_index/<YYYY-MM-DD> = { date, at, commit, tickets: { <id>: { title, status, fp, snap } } }
+  //   backup_snaps/<snap id>    = { ticket, taken_at, bundle: { ticket, state, approval, replies[], comments[], events[] } }
+  // fp is "status|plan_rev|status_at|updated_at" so the page can tell whether a ticket changed since.
+  const fpNow = (id) => { const t = state.tickets.get(id) || {}; const s = state.st.get(id) || {}; return [s.status || (t.submitted_at ? 'Submitted' : 'Draft'), s.plan_rev || 0, s.status_at || '', t.updated_at || t.created_at || ''].join('|'); };
+  const WORKING = ['Submitted', 'Investigating', 'Approved', 'Queued', 'Coding', 'Reviewing', WAIT];
+  let bkIndex = []; let bkDay = null; let bkOnly = 'changed'; const bkPick = new Set(); let bkPreview = null; let bkBusy = false;
+  async function openBackups() {
+    $('dlg-backups').showModal(); $('k-body').replaceChildren(h('div', { class: 'empty-col' }, 'Loading backups…')); $('k-foot').replaceChildren();
+    try { const snap = await state.db.collection('backup_index').get(); bkIndex = snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => String(b.at || b.id).localeCompare(String(a.at || a.id))); }
+    catch (err) { bkIndex = []; }
+    bkDay = bkIndex[0] || null; bkPick.clear(); bkPreview = null; renderBackups();
+  }
+  function bkRows(day) {
+    const rows = [];
+    const inBk = day ? day.tickets || {} : {};
+    for (const [id, b] of Object.entries(inBk)) {
+      const exists = state.tickets.has(id);
+      const diff = !exists ? 'deleted' : (fpNow(id) === b.fp ? 'same' : 'changed');
+      rows.push({ id, title: b.title || (state.tickets.get(id) || {}).title || '', then: b.status || '—', now: exists ? statusOf(id) : '—', diff, snap: b.snap, hint: diff === 'changed' ? fpHint(b.fp, fpNow(id)) : '' });
+    }
+    for (const id of state.tickets.keys()) if (!(id in inBk)) rows.push({ id, title: state.tickets.get(id).title || '', then: '—', now: statusOf(id), diff: 'new' });
+    return rows.sort((a, b) => Number(b.id.split('-')[1]) - Number(a.id.split('-')[1]));
+  }
+  // A short reason from the two fingerprints (status|plan_rev|status_at|updated_at).
+  function fpHint(then, now) {
+    const a = String(then || '').split('|'); const b = String(now || '').split('|'); const out = [];
+    if (a[0] !== b[0]) out.push('status: ' + (a[0] || '—') + ' → ' + (b[0] || '—'));
+    if (a[1] !== b[1]) out.push('plan revision ' + (a[1] || 0) + ' → ' + (b[1] || 0));
+    if (!out.length && a[2] !== b[2]) out.push('updated by Claude' + (b[2] ? ' ' + fmt(b[2]) : ''));
+    if (a[3] !== b[3]) out.push('edited on the board' + (b[3] ? ' ' + fmt(b[3]) : ''));
+    return out.join(' · ') || 'details changed';
+  }
+  const DIFF_LABEL = { changed: 'changed since', deleted: 'deleted since', new: 'created after this backup', same: 'same' };
+  function renderBackups() {
+    const body = $('k-body'); const foot = $('k-foot');
+    if (!bkIndex.length) {
+      body.replaceChildren(h('div', { class: 'callout warn' }, h('strong', null, 'No backups yet.'), h('span', null, 'Claude makes one every day during its 6:47 check, once the backup step is in the skill. Click "Run a check now" in the Health panel to make the first one.')));
+      foot.replaceChildren(h('button', { type: 'button', 'data-close': true }, 'Close')); return;
+    }
+    const rows = bkRows(bkDay);
+    const shown = rows.filter((r) => bkOnly === 'all' || (bkOnly === 'changed' ? r.diff !== 'same' : r.diff === bkOnly));
+    const counts = { changed: rows.filter((r) => r.diff === 'changed').length, deleted: rows.filter((r) => r.diff === 'deleted').length, new: rows.filter((r) => r.diff === 'new').length };
+    const days = h('div', { class: 'bk-days', role: 'list' }, bkIndex.map((d) => h('button', { type: 'button', 'aria-pressed': d === bkDay ? 'true' : 'false', onclick: () => { bkDay = d; bkPick.clear(); bkPreview = null; renderBackups(); } },
+      h('span', null, d.label || fmtDay(d.date || d.id)), h('span', { class: 'sub' }, Object.keys(d.tickets || {}).length + ' tickets' + (d.safety ? ' · safety copy' : '')))));
+    const onlySel = h('select', { id: 'k-only', 'aria-label': 'Which tickets to list', style: 'width:auto' },
+      [['changed', 'Changed, deleted or new since'], ['deleted', 'Deleted since'], ['all', 'All tickets']].map(([v, l]) => h('option', { value: v }, l)));
+    onlySel.value = bkOnly; onlySel.addEventListener('change', () => { bkOnly = onlySel.value; renderBackups(); });
+    const table = h('div', { class: 'settings-wrap' }, h('table', { class: 'rtable' },
+      h('thead', null, h('tr', null, h('th', null, ''), h('th', null, 'Ticket'), h('th', null, 'In backup'), h('th', null, 'Now'), h('th', null, 'Difference'), h('th', null, ''))),
+      h('tbody', null, shown.length ? shown.map((r) => {
+        const cb = h('input', { type: 'checkbox', 'aria-label': 'Restore ' + r.id, disabled: r.diff === 'new' || r.diff === 'same' });
+        cb.checked = bkPick.has(r.id); cb.addEventListener('change', () => { if (cb.checked) bkPick.add(r.id); else bkPick.delete(r.id); renderBackupsFoot(rows); });
+        return h('tr', null, h('td', null, cb), h('td', null, r.id + ' · ' + r.title.slice(0, 40)), h('td', null, r.then), h('td', null, r.now),
+          h('td', null, h('span', { class: 'diff-' + r.diff }, DIFF_LABEL[r.diff]), r.hint ? h('div', { class: 'empty-col', style: 'padding:0' }, r.hint) : null),
+          h('td', null, r.snap ? h('button', { type: 'button', onclick: () => loadPreview(r) }, 'Preview') : null));
+      }) : [h('tr', null, h('td', { colspan: '6', class: 'empty-col' }, 'Nothing to show for this filter.'))])));
+    body.replaceChildren(h('div', { class: 'bk' }, days, h('div', { style: 'display:grid;gap:12px;min-width:0' },
+      h('div', { class: 'row-between' }, h('strong', null, 'Backup of ' + (bkDay.label || fmtDay(bkDay.date || bkDay.id))),
+        h('span', { class: 'empty-col' }, counts.changed + ' changed · ' + counts.deleted + ' deleted · ' + counts.new + ' created after')),
+      onlySel, table, bkPreview ? previewView(bkPreview) : null)));
+    renderBackupsFoot(rows);
+  }
+  const fmtDay = (d) => { const x = new Date(d); return isNaN(x) ? String(d) : x.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); };
+  async function loadPreview(r) {
+    try {
+      const snap = await state.db.doc('backup_snaps/' + r.snap).get();
+      bkPreview = snap.exists ? { row: r, bundle: snap.data().bundle || {}, now: state.tickets.has(r.id) ? await bundleNow(r.id) : null } : { row: r, missing: true };
+    }
+    catch (_) { bkPreview = { row: r, missing: true }; }
+    renderBackups();
+  }
+  function previewView(p) {
+    if (p.missing) return h('div', { class: 'callout warn' }, 'This backup copy is no longer stored on the board (older than 30 days). It is still in the GitHub backup: ask Claude to restore ' + p.row.id + ' from that day.');
+    const b = p.bundle; const t = b.ticket || {}; const s = b.state || {};
+    return h('div', { class: 'preview' },
+      p.now ? changesView(b, p.now) : h('div', { class: 'callout bad' }, 'This ticket was deleted since. Restoring brings it back exactly as below.'),
+      h('div', { class: 'row-between' }, h('strong', null, p.row.id + ' as it was: ' + (t.title || '')), h('span', { class: 'pill' }, s.status || (t.submitted_at ? 'Submitted' : 'Draft'))),
+      h('section', { class: 'block' }, h('h4', null, 'Description'), md(t.description || '')),
+      s.plan ? h('section', { class: 'block' }, h('h4', null, 'Plan · revision ' + (s.plan_rev || 0)), md(s.plan)) : null,
+      h('div', { class: 'empty-col' }, (b.comments || []).length + ' comments · ' + (b.replies || []).length + ' answers · ' + (b.events || []).length + ' history entries' + (Object.keys(s.prs || {}).length ? ' · PRs: ' + Object.values(s.prs).join(', ') : '')));
+  }
+  // Line diff (longest common subsequence) for description and plan: removed lines red, added lines green.
+  function lineDiff(a, b) {
+    const x = String(a || '').split('\n'); const y = String(b || '').split('\n');
+    if (x.length * y.length > 40000) return null;
+    const L = Array.from({ length: x.length + 1 }, () => new Array(y.length + 1).fill(0));
+    for (let i = x.length - 1; i >= 0; i--) for (let j = y.length - 1; j >= 0; j--) L[i][j] = x[i] === y[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = []; let i = 0, j = 0;
+    while (i < x.length && j < y.length) { if (x[i] === y[j]) { out.push([' ', x[i]]); i++; j++; } else if (L[i + 1][j] >= L[i][j + 1]) out.push(['-', x[i++]]); else out.push(['+', y[j++]]); }
+    while (i < x.length) out.push(['-', x[i++]]); while (j < y.length) out.push(['+', y[j++]]);
+    return out;
+  }
+  function diffBlock(label, a, b) {
+    const d = lineDiff(a, b);
+    const box = h('div', { class: 'ldiff', role: 'group', 'aria-label': label + ' changes' });
+    if (!d) { box.append(h('div', null, 'Too long to compare line by line.')); return box; }
+    // Show changed lines with one line of context around them.
+    const keep = d.map((x, k) => x[0] !== ' ' || (d[k - 1] && d[k - 1][0] !== ' ') || (d[k + 1] && d[k + 1][0] !== ' '));
+    let skipped = false;
+    d.forEach((x, k) => {
+      if (!keep[k]) { if (!skipped) box.append(h('div', { class: 'ctx' }, '…')); skipped = true; return; }
+      skipped = false;
+      box.append(h('div', { class: x[0] === '-' ? 'del' : x[0] === '+' ? 'add' : 'ctx' }, (x[0] === '-' ? '− ' : x[0] === '+' ? '+ ' : '  ') + (x[1] || ' ')));
+    });
+    return box;
+  }
+  function changesView(then, now) {
+    const T = then.ticket || {}, N = now.ticket || {}, ST = then.state || {}, SN = now.state || {};
+    const items = []; const blocks = [];
+    const val = (v) => (v === undefined || v === null || v === '' ? '—' : typeof v === 'boolean' ? (v ? 'on' : 'off') : Array.isArray(v) ? (v.length ? v.join(', ') : '—') : String(v));
+    for (const [k, label] of [['title', 'Title'], ['type', 'Type'], ['priority', 'Priority'], ['screenshots', 'Screenshots'], ['claude_review', 'Claude review']]) {
+      if (JSON.stringify(T[k] ?? null) !== JSON.stringify(N[k] ?? null)) items.push(label + ': ' + val(T[k]) + ' → ' + val(N[k]));
+    }
+    if (!!T.archived_at !== !!N.archived_at) items.push(N.archived_at ? 'Archived since' : 'Unarchived since');
+    if (!!T.submitted_at !== !!N.submitted_at) items.push(N.submitted_at ? 'Submitted since' : 'Back to draft');
+    if (JSON.stringify(T.links || []) !== JSON.stringify(N.links || [])) items.push('Links: ' + ((T.links || []).map((l) => (LINK_LABEL[l.type] || l.type) + ' ' + l.id).join(', ') || '—') + ' → ' + ((N.links || []).map((l) => (LINK_LABEL[l.type] || l.type) + ' ' + l.id).join(', ') || '—'));
+    if ((T.attachments || []).length !== (N.attachments || []).length) items.push('Attachments: ' + (T.attachments || []).length + ' → ' + (N.attachments || []).length);
+    if ((T.description || '') !== (N.description || '')) { items.push('Description changed'); blocks.push(h('section', { class: 'block' }, h('h4', null, 'Description: before → now'), diffBlock('Description', T.description, N.description))); }
+    if ((ST.status || '') !== (SN.status || '')) items.push('Status: ' + val(ST.status) + ' → ' + val(SN.status));
+    if ((ST.plan_rev || 0) !== (SN.plan_rev || 0)) items.push('Plan revision: ' + (ST.plan_rev || 0) + ' → ' + (SN.plan_rev || 0));
+    if ((ST.plan || '') !== (SN.plan || '')) { items.push('Plan changed'); blocks.push(h('section', { class: 'block' }, h('h4', null, 'Plan: before → now'), diffBlock('Plan', ST.plan, SN.plan))); }
+    if ((ST.brief || '') !== (SN.brief || '')) items.push('Brief changed');
+    if ((ST.note || '') !== (SN.note || '')) items.push('Note: ' + val(ST.note) + ' → ' + val(SN.note));
+    if (JSON.stringify(ST.prs || {}) !== JSON.stringify(SN.prs || {})) items.push('PRs: ' + (Object.values(ST.prs || {}).join(', ') || '—') + ' → ' + (Object.values(SN.prs || {}).join(', ') || '—'));
+    if (JSON.stringify(ST.merged || []) !== JSON.stringify(SN.merged || [])) items.push('Merged: ' + val(ST.merged || []) + ' → ' + val(SN.merged || []));
+    if (JSON.stringify(ST.questions || []) !== JSON.stringify(SN.questions || [])) items.push('Claude\'s questions changed');
+    const newer = (a, c) => { const ids = new Set((a || []).map((x) => x.id)); return (c || []).filter((x) => !ids.has(x.id)); };
+    const gone = (a, c) => newer(c, a);
+    const nc = newer(then.comments, now.comments), gc = gone(then.comments, now.comments);
+    const nr = newer(then.replies, now.replies), gr = gone(then.replies, now.replies);
+    const ne = newer(then.events, now.events);
+    if (nc.length) items.push(nc.length + ' new comment' + (nc.length > 1 ? 's' : '') + ': ' + nc.slice(0, 3).map((c) => '"' + String((c.data || {}).text || '').slice(0, 60) + '"').join(', ') + (nc.length > 3 ? '…' : ''));
+    if (gc.length) items.push(gc.length + ' comment' + (gc.length > 1 ? 's' : '') + ' removed');
+    if (nr.length) items.push(nr.length + ' new answer' + (nr.length > 1 ? 's' : '') + ' to Claude');
+    if (gr.length) items.push(gr.length + ' answer' + (gr.length > 1 ? 's' : '') + ' removed');
+    if (ne.length) items.push('Claude since: ' + ne.slice(0, 4).map((e) => (e.data || {}).text || (e.data || {}).kind).join('; ') + (ne.length > 4 ? '…' : ''));
+    // Fields that only record when it was touched (no visible change): say so instead of showing nothing.
+    if (!items.length) items.push((T.updated_at || '') !== (N.updated_at || '') ? 'Saved again on the board without a visible change (' + fmt(N.updated_at) + ')' : 'Only timestamps changed (' + fmt(SN.status_at) + ')');
+    return h('div', { class: 'callout warn' }, h('strong', null, 'What changed since this backup'), h('ul', { class: 'problems' }, items.map((x) => h('li', null, x))), ...blocks);
+  }
+  function renderBackupsFoot(rows) {
+    const foot = $('k-foot'); const msg = h('span', { class: 'msg', role: 'status', id: 'k-msg' });
+    const restorable = rows.filter((r) => r.diff === 'changed' || r.diff === 'deleted');
+    const removeNew = h('input', { type: 'checkbox', id: 'k-remove-new' });
+    foot.replaceChildren(msg, h('button', { type: 'button', 'data-close': true }, 'Close'),
+      h('button', { type: 'button', disabled: !bkPick.size || bkBusy, onclick: () => confirmRestore(rows.filter((r) => bkPick.has(r.id)), [], 'Restore ' + bkPick.size + (bkPick.size > 1 ? ' tickets' : ' ticket')) }, 'Restore selected (' + bkPick.size + ')'),
+      h('button', { type: 'button', class: 'danger', disabled: !restorable.length || bkBusy, onclick: () => confirmRestore(restorable, removeNew.checked ? rows.filter((r) => r.diff === 'new') : [], 'Restore everything') }, 'Restore everything from this day'),
+      h('label', { class: 'toggle', style: 'flex-basis:100%;justify-content:flex-end' }, removeNew, ' With "Restore everything", also delete tickets created after this backup'));
+  }
+  function confirmRestore(list, toDelete, title) {
+    const foot = $('k-foot'); if (foot.querySelector('.confirm')) return;
+    const lines = [...list.map((r) => r.diff === 'deleted' ? r.id + ' comes back (' + r.then + ')' : r.id + ' goes back to ' + r.then + ' and loses its changes since'), ...toDelete.map((r) => r.id + ' (created after) is deleted')];
+    const box = h('div', { class: 'confirm', role: 'alert' },
+      h('span', null, title + '? ' + lines.join('; ') + '. A safety copy of the current state is saved first, so this can be undone. Tickets that were being worked on come back paused.'),
+      h('button', { type: 'button', class: 'danger', onclick: () => { box.remove(); doRestore(list, toDelete); } }, 'Restore'),
+      h('button', { type: 'button', onclick: () => box.remove() }, 'Keep'));
+    foot.prepend(box);
+  }
+  async function bundleNow(id) {
+    const g = async (p) => { try { const x = await state.db.doc(p).get(); return x.exists ? x.data() : null; } catch (_) { return null; } };
+    const list = async (c) => { try { const x = await state.db.collection(c).get(); return x.docs.map((d) => ({ id: d.id, data: d.data() })); } catch (_) { return []; } };
+    return { ticket: await g('tickets/' + id), state: await g('ticket_state/' + id), approval: await g('approvals/' + id),
+      replies: await list('tickets/' + id + '/replies'), comments: await list('tickets/' + id + '/comments'),
+      events: state.events.filter((e) => e.ticket === id).map((e) => { const { _id, ...data } = e; return { id: _id, data }; }) };
+  }
+  async function writeBundle(id, b, dayLabel) {
+    const del = async (p) => { try { await state.db.doc(p).delete(); } catch (_) { /* already gone */ } };
+    // Children first, then the ticket, so the board never shows a half-restored ticket as complete.
+    for (const c of ['replies', 'comments']) {
+      const cur = await state.db.collection('tickets/' + id + '/' + c).get();
+      for (const d of cur.docs) await del('tickets/' + id + '/' + c + '/' + d.id);
+      for (const d of b[c] || []) await state.db.doc('tickets/' + id + '/' + c + '/' + d.id).set(d.data);
+    }
+    for (const e of state.events.filter((x) => x.ticket === id)) await del('events/' + e._id);
+    for (const e of b.events || []) await state.db.doc('events/' + e.id).set(e.data);
+    if (b.approval) await state.db.doc('approvals/' + id).set(b.approval); else await del('approvals/' + id);
+    if (b.state) {
+      const st = { ...b.state };
+      if (WORKING.includes(st.status)) { st.status = 'AI paused – needs decision'; st.note = 'Restored from the backup of ' + dayLabel + '. Click Continue to resume.'; st.status_at = nowIso(); }
+      await state.db.doc('ticket_state/' + id).set(st);
+    } else await del('ticket_state/' + id);
+    if (b.ticket) await state.db.doc('tickets/' + id).set({ ...b.ticket, restored_at: nowIso(), restored_from: dayLabel });
+  }
+  async function deleteAll(id) {
+    const del = async (p) => { try { await state.db.doc(p).delete(); } catch (_) { /* gone */ } };
+    for (const c of ['replies', 'comments']) { const cur = await state.db.collection('tickets/' + id + '/' + c).get(); for (const d of cur.docs) await del('tickets/' + id + '/' + c + '/' + d.id); }
+    for (const e of state.events.filter((x) => x.ticket === id)) await del('events/' + e._id);
+    await del('approvals/' + id); await del('ticket_state/' + id); await del('tickets/' + id);
+  }
+  async function doRestore(list, toDelete) {
+    const msgEl = () => $('k-msg'); bkBusy = true; renderBackups();
+    const day = bkDay; const dayLabel = day.label || fmtDay(day.date || day.id); const stampId = new Date().toISOString().replace(/[:.]/g, '-');
+    try {
+      // 1. Safety copy of everything this restore touches.
+      if (msgEl()) msgEl().textContent = 'Saving a safety copy…';
+      const safety = { date: nowIso().slice(0, 10), label: 'Safety copy before restoring ' + dayLabel, safety: true, at: nowIso(), tickets: {} };
+      for (const r of [...list, ...toDelete]) {
+        if (!state.tickets.has(r.id)) continue;
+        const snapId = r.id + '@safety-' + stampId; const bundle = await bundleNow(r.id);
+        await state.db.doc('backup_snaps/' + snapId).set({ ticket: r.id, taken_at: nowIso(), bundle });
+        safety.tickets[r.id] = { title: (bundle.ticket || {}).title || '', status: statusOf(r.id), fp: fpNow(r.id), snap: snapId };
+      }
+      await state.db.doc('backup_index/safety-' + stampId).set(safety);
+      // 2. Restore.
+      for (const r of list) {
+        if (msgEl()) msgEl().textContent = 'Restoring ' + r.id + '…';
+        const snap = await state.db.doc('backup_snaps/' + r.snap).get();
+        if (!snap.exists) throw new Error(r.id + ': this backup copy is no longer on the board');
+        await writeBundle(r.id, snap.data().bundle || {}, dayLabel);
+      }
+      for (const r of toDelete) { if (msgEl()) msgEl().textContent = 'Deleting ' + r.id + '…'; await deleteAll(r.id); }
+      const ids = [...list.map((r) => r.id), ...toDelete.map((r) => r.id)];
+      logChange(null, 'restored from the backup of ' + dayLabel, ids.join(', '));
+      for (const id of list.map((r) => r.id)) logChange(id, 'restored from the backup of ' + dayLabel);
+      const res = await sendToClaude('Restored ' + ids.join(', ') + ' from the backup of ' + dayLabel + ': re-read them', $('k-body'));
+      bkBusy = false; bkPick.clear(); await openBackups();
+      if (msgEl()) msgEl().textContent = 'Restored ' + ids.length + (ids.length > 1 ? ' tickets' : ' ticket') + '. ' + (res.ok ? 'Claude is told.' : res.reason);
+    } catch (err) {
+      bkBusy = false; renderBackups();
+      if (msgEl()) msgEl().textContent = 'Restore stopped: ' + ((err && (err.message || err.code)) || 'error') + '. The safety copy is in the list; restore it to go back.';
+    }
+  }
+
+  // ---------- ticket links ----------
+  // tickets/<id>.links = [{ type: 'blocks' | 'duplicate_of' | 'related', id }]. The other side is shown
+  // as its reverse ("Blocked by", "Duplicated by"). ticket_state.suggested_links = [{ type, id, why }]
+  // come from Claude's planning; tickets/<id>.dismissed_links = ['type:id'] hides a suggestion.
+  const LINK_LABEL = { blocks: 'Blocks', duplicate_of: 'Duplicate of', related: 'Related to' };
+  const REVERSE_LABEL = { blocks: 'Blocked by', duplicate_of: 'Duplicated by', related: 'Related to' };
+  const isOpen = (id) => state.tickets.has(id) && !isArchived(id) && statusOf(id) !== 'Done';
+  function linksOf(id) {
+    const out = [];
+    for (const l of (state.tickets.get(id) || {}).links || []) out.push({ label: LINK_LABEL[l.type] || l.type, id: l.id, own: l });
+    for (const [other, t] of state.tickets) {
+      if (other === id) continue;
+      for (const l of t.links || []) if (l.id === id) out.push({ label: REVERSE_LABEL[l.type] || l.type, id: other, reverse: true, type: l.type });
+    }
+    return out;
+  }
+  function cardLinkPills(id) {
+    const out = [];
+    const blockers = linksOf(id).filter((l) => l.reverse && l.type === 'blocks' && isOpen(l.id)).map((l) => l.id);
+    if (blockers.length) out.push(h('span', { class: 'pill warn' }, 'Blocked by ' + blockers.join(', ')));
+    const dup = ((state.tickets.get(id) || {}).links || []).find((l) => l.type === 'duplicate_of');
+    if (dup) out.push(h('span', { class: 'pill' }, 'Duplicate of ' + dup.id));
+    return out;
+  }
+  async function saveLinks(id, links, action) {
+    await state.db.doc('tickets/' + id).update({ links, ...stamp() });
+    logChange(id, action);
+  }
+  function linksSection(id, t, s, canEdit, msg) {
+    const sec = h('section', { class: 'block' }, h('h4', null, 'Links'));
+    const list = linksOf(id);
+    sec.append(list.length ? h('div', { class: 'thread' }, list.map((l) => h('div', { class: 'row-between' },
+      h('span', null, l.label + ' ', h('a', { href: '#', onclick: (e) => { e.preventDefault(); if (state.tickets.has(l.id)) openDetail(l.id); } }, l.id), ' · ' + ((state.tickets.get(l.id) || {}).title || 'deleted ticket') + (state.tickets.has(l.id) ? ' (' + statusOf(l.id) + ')' : '')),
+      canEdit && l.own ? h('button', { type: 'button', class: 'x', 'aria-label': 'Remove link to ' + l.id, onclick: async () => {
+        try { await saveLinks(id, (t.links || []).filter((x) => x !== l.own), 'removed link: ' + l.label.toLowerCase() + ' ' + l.id); } catch (err) { msg.textContent = 'Not changed: ' + ((err && err.code) || 'error') + '.'; }
+      } }, '×') : null)))
+      : h('div', { class: 'empty-col' }, 'No links.'));
+    // Claude's suggestions from planning (likely duplicates or related tickets).
+    const dismissed = new Set(t.dismissed_links || []);
+    const have = new Set((t.links || []).map((l) => l.type + ':' + l.id));
+    const sugg = (s.suggested_links || []).filter((x) => x && x.id && x.id !== id && state.tickets.has(x.id) && !dismissed.has(x.type + ':' + x.id) && !have.has(x.type + ':' + x.id));
+    if (sugg.length) sec.append(h('div', { class: 'callout accent' }, h('strong', null, 'Claude suggests'), sugg.map((x) => h('div', { class: 'row-between' },
+      h('span', null, (LINK_LABEL[x.type] || x.type) + ' ' + x.id + ' · ' + (state.tickets.get(x.id).title || '') + (x.why ? ' — ' + x.why : '')),
+      canEdit ? h('div', { class: 'actions' },
+        h('button', { type: 'button', onclick: async () => { try { await saveLinks(id, [...(t.links || []), { type: x.type, id: x.id }], 'added suggested link: ' + (LINK_LABEL[x.type] || x.type).toLowerCase() + ' ' + x.id); } catch (err) { msg.textContent = 'Not changed.'; } } }, 'Add'),
+        h('button', { type: 'button', onclick: async () => { try { await state.db.doc('tickets/' + id).update({ dismissed_links: [...dismissed, x.type + ':' + x.id], ...stamp() }); logChange(id, 'dismissed suggested link to ' + x.id); } catch (err) { msg.textContent = 'Not changed.'; } } }, 'Dismiss')) : null))));
+    if (canEdit) {
+      const typeSel = h('select', { id: 'd-link-type', 'aria-label': 'Link type', style: 'width:auto' }, Object.entries(LINK_LABEL).map(([v, l]) => h('option', { value: v }, l)));
+      const others = [...state.tickets.keys()].filter((x) => x !== id).sort((a, b) => Number(b.split('-')[1]) - Number(a.split('-')[1]));
+      const tSel = h('select', { id: 'd-link-target', 'aria-label': 'Ticket to link', style: 'width:auto;max-width:100%' }, others.map((x) => h('option', { value: x }, x + ' · ' + (state.tickets.get(x).title || '').slice(0, 50))));
+      sec.append(h('div', { class: 'actions' }, typeSel, tSel, h('button', { type: 'button', disabled: !others.length, onclick: async () => {
+        const link = { type: typeSel.value, id: tSel.value };
+        if ((t.links || []).some((l) => l.type === link.type && l.id === link.id)) { msg.textContent = 'That link already exists.'; return; }
+        try { await saveLinks(id, [...(t.links || []), link], 'added link: ' + LINK_LABEL[link.type].toLowerCase() + ' ' + link.id); } catch (err) { msg.textContent = 'Not changed: ' + ((err && err.code) || 'error') + '.'; }
+      } }, 'Add link')));
+    }
+    return sec;
+  }
+
+  // ---------- board ----------
+  function render() {
+    const cols = $('cols'); cols.replaceChildren();
+    const all = [...state.tickets.keys()];
+    $('empty').hidden = !(state.loaded && all.length === 0);
+    if (state.loaded && all.length === 0) return;
+    const q = $('search').value.trim().toLowerCase();
+    const f = readFilters(); const myId = state.me && state.me.id;
+    const allowed = all.filter((id) => statusOf(id) !== 'Draft' || state.owner || state.tickets.get(id).author_id === myId);
+    const visible = allowed
+      .filter((id) => {
+        if (!q) return true;
+        const t = state.tickets.get(id); const s = state.st.get(id) || {};
+        // Search covers the request, Claude's brief, plan and notes, and the PR links.
+        return [id, t.title, t.description, nameOf(t.author_id), t.type, t.priority, s.brief, s.plan, s.note, s.review_summary, Object.values(s.prs || {}).join(' ')].join(' ').toLowerCase().includes(q);
+      })
+      .filter((id) => passesFilters(id, f, myId))
+      .sort((a, b) => {
+        const ta = state.tickets.get(a), tb = state.tickets.get(b);
+        return (PRIO[ta.priority] ?? 1) - (PRIO[tb.priority] ?? 1) || String(ta.submitted_at || ta.created_at).localeCompare(String(tb.submitted_at || tb.created_at));
+      });
+    // A ticket held for usage stays in the column of the stage it waits to start.
+    const colOf = (id) => { const st = statusOf(id); return st === WAIT ? (({ coding: 'Coding', review: 'PR open' }[(state.st.get(id) || {}).waiting_stage] || 'With Claude')) : null; };
+    const columns = COLS.map((col) => ({ label: col.label, dot: col.dot, hint: col.hint, list: visible.filter((id) => !isArchived(id) && (colOf(id) ? colOf(id) === col.label : col.statuses.includes(statusOf(id)))) }));
+    const archivedMatches = visible.filter(isArchived);
+    $('fl-count').textContent = (q || filtersActive(f)) ? 'Showing ' + visible.filter((id) => !isArchived(id)).length + ' of ' + allowed.filter((id) => !isArchived(id)).length + (archivedMatches.length ? ' (+' + archivedMatches.length + ' archived)' : '') : '';
+    $('fl-clear').hidden = !filtersActive(f);
+    // While searching or filtering, archived matches show in their own column even if "Show archived" is off.
+    if ($('show-archived').checked || ((q || filtersActive(f)) && archivedMatches.length)) columns.push({ label: 'Archived', archived: true, dot: '', hint: 'Hidden from the board', list: visible.filter(isArchived) });
+    for (const col of columns) {
+      const box = h('section', { class: 'col' + (col.archived ? ' archived' : ''), 'aria-label': col.label },
+        h('h2', null, h('span', { class: 'dot ' + (col.dot || ''), 'aria-hidden': 'true' }), h('span', null, col.label), h('span', { class: 'count' }, String(col.list.length))),
+        col.hint ? h('div', { class: 'hint' }, col.hint) : null);
+      if (!col.list.length && q) box.append(h('div', { class: 'empty-col' }, 'No match'));
+      for (const id of col.list) box.append(card(id));
+      cols.append(box);
+    }
+  }
+  const isArchived = (id) => !!(state.tickets.get(id) || {}).archived_at;
+
+  // ---------- filters (remembered per viewer in this browser) ----------
+  const FILTER_IDS = ['fl-who', 'fl-repo', 'fl-author', 'fl-type', 'fl-age'];
+  const readFilters = () => Object.fromEntries(FILTER_IDS.map((k) => [k, $(k).value]));
+  const filtersActive = (f) => Object.values(f).some(Boolean);
+  function passesFilters(id, f, myId) {
+    const t = state.tickets.get(id); const s = state.st.get(id) || {}; const st = statusOf(id);
+    if (f['fl-who'] === 'mine' && t.author_id !== myId) return false;
+    if (f['fl-who'] === 'waiting') {
+      const mine = t.author_id === myId;
+      const waiting = (mine && (st === 'Draft' || st === 'Needs info')) || (canApprove() && (st === 'Plan ready' || PAUSED.includes(st)));
+      if (!waiting || isArchived(id)) return false;
+    }
+    if (f['fl-repo'] && !(s.scope || []).includes(f['fl-repo'])) return false;
+    if (f['fl-author'] && t.author_id !== f['fl-author']) return false;
+    if (f['fl-type'] && (t.type || 'feature') !== f['fl-type']) return false;
+    if (f['fl-age'] && (Date.now() - new Date(t.created_at || 0)) / 86400000 > Number(f['fl-age'])) return false;
+    return true;
+  }
+  function fillAuthorFilter() {
+    const sel = $('fl-author'); const cur = sel.value;
+    const ids = [...new Set([...state.tickets.values()].map((t) => t.author_id).filter(Boolean))];
+    sel.replaceChildren(h('option', { value: '' }, 'Anyone'), ...ids.sort((a, b) => nameOf(a).localeCompare(nameOf(b))).map((uid) => h('option', { value: uid }, nameOf(uid))));
+    sel.value = ids.includes(cur) ? cur : '';
+  }
+  const ACTIVE = ['Submitted', 'Investigating', 'Approved', 'Queued', 'Coding', 'Reviewing'];
+
+  function card(id) {
+    const t = state.tickets.get(id); const s = state.st.get(id) || {}; const status = statusOf(id);
+    const prs = Object.keys(s.prs || {}).length;
+    return h('button', { type: 'button', class: 'card', onclick: () => openDetail(id) },
+      h('div', { class: 'top' }, h('span', { class: 'tid' }, id), h('span', { class: 'pill ' + (TONE[status] || '') }, status)),
+      h('div', { class: 'title' }, t.title || 'Untitled'),
+      h('div', { class: 'meta' },
+        h('span', null, cap(t.type || 'feature')), h('span', null, '·'), h('span', { class: 'prio ' + (t.priority || 'medium') }, cap(t.priority || 'medium')),
+        h('span', null, '·'), h('span', { class: 'who-chip' }, h('span', { class: 'avatar', 'aria-hidden': 'true' }, initials(nameOf(t.author_id))), nameOf(t.author_id)),
+        s.questions && s.questions.length && status === 'Needs info' ? h('span', { class: 'pill warn' }, s.questions.length + (s.questions.length > 1 ? ' questions' : ' question')) : null,
+        prs ? h('span', { class: 'pill good' }, prs + ' PR' + (prs > 1 ? 's' : '')) : null,
+        ...cardPrPills(s).map(([tone, label]) => h('span', { class: 'pill ' + tone }, label)),
+        t.claude_review ? h('span', { class: 'pill' + (status === 'Reviewing' ? ' accent' : '') }, status === 'Reviewing' ? 'Claude reviewing' : (s.review_state === 'done' ? 'Claude reviewed' : 'Claude review')) : null,
+        agentShotCount(s) ? h('span', { class: 'pill' }, agentShotCount(s) + (agentShotCount(s) > 1 ? ' screenshots' : ' screenshot')) : null,
+        ...cardLinkPills(id)));
+  }
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const initials = (name) => String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
+
+  // ---------- send to Claude ----------
+  async function sendToClaude(text, anchorEl) {
+    if (!state.comments) return { ok: false, reason: 'Comments are not available in this view.' };
+    try {
+      const can = await state.comments.canSendToClaude();
+      if (can !== 'available') {
+        const why = { writers_only: 'only editors of this board can send to Claude', no_session: 'the orchestrator is not watching right now', off: 'sending to Claude is off here' }[can] || can;
+        return { ok: false, reason: 'Saved, but not sent to Claude: ' + why + '. The daily check will pick it up.' };
+      }
+      const anchor = await state.comments.anchorFor(anchorEl);
+      await state.comments.sendToClaude({ anchor, text });
+      return { ok: true };
+    } catch (err) {
+      const code = err && err.code;
+      const why = { claude_unavailable: 'Claude could not receive it', rate_limited: 'too many sends, wait a minute', consent_required: 'allow comments for this page when asked', not_granted: 'comments are not allowed for this page' }[code] || (code || 'unknown error');
+      return { ok: false, reason: 'Saved, but not sent to Claude: ' + why + '.' };
+    }
+  }
+
+  // ---------- new / edit ticket ----------
+  let editing = null; let pendingAttachments = [];
+  function openForm(id) {
+    editing = id || null;
+    const t = id ? state.tickets.get(id) : {};
+    $('form-id').textContent = id || 'New ticket';
+    $('form-title').textContent = id ? 'Edit draft' : 'Describe the request';
+    $('f-title').value = t.title || ''; $('f-desc').value = t.description || '';
+    $('f-type').value = t.type || 'feature'; $('f-priority').value = t.priority || 'medium';
+    pendingAttachments = [...(t.attachments || [])];
+    $('f-shots').checked = !!t.screenshots;
+    $('f-review').checked = !!t.claude_review;
+    $('f-files').value = ''; $('form-msg').textContent = '';
+    renderThumbs();
+    $('f-files').disabled = !state.assets;
+    $('dlg-form').showModal();
+  }
+  // Attachments are stored as {id, name, type}; older tickets stored a bare asset id (always an image).
+  const attId = (a) => (typeof a === 'string' ? a : a && a.id);
+  const attName = (a, i) => (typeof a === 'string' ? 'Screenshot ' + (i + 1) : (a.name || 'File ' + (i + 1)));
+  const attIsImage = (a) => typeof a === 'string' || String(a.type || '').startsWith('image/');
+  const agentShotCount = (s) => (Array.isArray(s.screenshots) ? s.screenshots.filter((x) => x && x.asset_id).length : 0);
+  function attachmentView(a, i, removable) {
+    const id = attId(a);
+    const inner = attIsImage(a)
+      ? h('img', { src: '/_blob/' + id, alt: attName(a, i) })
+      : h('span', { class: 'file' }, h('span', { class: 'ext' }, (String(a.name || '').split('.').pop() || 'file').slice(0, 4).toUpperCase()), h('span', { class: 'fname' }, attName(a, i)));
+    if (!removable) return h('a', { href: '/_blob/' + id, target: '_blank', rel: 'noopener', class: attIsImage(a) ? '' : 'filecard', title: attName(a, i) }, inner);
+    return h('div', { class: 't' + (attIsImage(a) ? '' : ' filecard') }, inner,
+      h('button', { type: 'button', class: 'rm', 'aria-label': 'Remove ' + attName(a, i), onclick: () => { pendingAttachments.splice(i, 1); renderThumbs(); } }, '×'));
+  }
+  function renderThumbs() {
+    const box = $('f-thumbs'); box.replaceChildren();
+    pendingAttachments.forEach((a, i) => box.append(attachmentView(a, i, true)));
+  }
+  $('f-files').addEventListener('change', async (e) => {
+    const files = [...e.target.files]; if (!files.length || !state.assets) return;
+    $('form-msg').textContent = 'Uploading…';
+    for (const f of files) {
+      try { const r = await state.assets.upload(f); pendingAttachments.push({ id: r.id, name: f.name, type: r.contentType || f.type || '' }); }
+      catch (err) { $('form-msg').textContent = 'Could not upload ' + f.name + ' (' + ((err && err.code) || 'error') + ').'; }
+    }
+    if ($('form-msg').textContent === 'Uploading…') $('form-msg').textContent = '';
+    e.target.value = ''; renderThumbs();
+  });
+
+  // One line describing what an edit changed, for the change log.
+  function diffText(a, b) {
+    const out = [];
+    for (const [k, label] of [['title', 'title'], ['description', 'description'], ['type', 'type'], ['priority', 'priority'], ['screenshots', 'screenshots'], ['claude_review', 'Claude review']]) {
+      if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) out.push(k === 'description' ? 'description' : label + ': ' + (a[k] ?? '—') + ' → ' + (b[k] ?? '—'));
+    }
+    if ((a.attachments || []).length !== (b.attachments || []).length) out.push('attachments: ' + (a.attachments || []).length + ' → ' + (b.attachments || []).length);
+    return out.join('; ') || 'no field changed';
+  }
+
+  // Prefix from the company settings; before they exist, the one the board's tickets already use.
+  function ticketPrefix() {
+    if (state.company && state.company.prefix) return String(state.company.prefix).replace(/-+$/, '');
+    const seen = [...state.tickets.keys()].map((k) => k.split('-')[0]).filter(Boolean);
+    return seen[0] || 'T';
+  }
+  async function nextId() {
+    const ref = state.db.doc('meta/counter');
+    for (let i = 0; i < 8; i++) {
+      const lease = await ref.acquire({ holder: state.me.id || 'anon', ttlMs: 4000 });
+      if (lease.acquired) {
+        const snap = await ref.get();
+        const used = Math.max(0, ...[...state.tickets.keys()].map((k) => Number(k.split('-')[1]) || 0));
+        const n = Math.max((snap.exists && snap.data().next) || 1, used + 1);
+        await ref.set({ next: n + 1 });
+        return ticketPrefix() + '-' + n;
+      }
+      await new Promise((r) => setTimeout(r, 400 + i * 200));
+    }
+    throw new Error('Could not reserve a ticket number. Try again.');
+  }
+
+  async function saveTicket(submit) {
+    const title = $('f-title').value.trim(); const description = $('f-desc').value.trim();
+    if (!title || !description) { $('form-msg').textContent = 'Add a title and a description.'; return; }
+    const btns = [$('f-save'), $('f-submit')]; btns.forEach((b) => { b.disabled = true; });
+    $('form-msg').textContent = submit ? 'Submitting…' : 'Saving…';
+    try {
+      const id = editing || await nextId();
+      const prev = state.tickets.get(id) || {};
+      const doc = {
+        ...prev, // keep fields this form does not edit (e.g. source)
+        id, title, description, screenshots: $('f-shots').checked, claude_review: $('f-review').checked, type: $('f-type').value, priority: $('f-priority').value,
+        author_id: prev.author_id || state.me.id, attachments: pendingAttachments,
+        created_at: prev.created_at || nowIso(), submitted_at: submit ? nowIso() : (prev.submitted_at || ''),
+      };
+      await state.db.doc('tickets/' + id).set({ ...doc, ...stamp() });
+      logChange(id, editing ? (submit ? 'edited and submitted' : 'edited') : (submit ? 'created and submitted' : 'created as draft'),
+        editing ? diffText(prev, doc) : title);
+      if (submit) {
+        const res = await sendToClaude('Submit ' + id + ': ' + title, $('cols'));
+        if (!res.ok) { notice(res.reason); }
+      }
+      $('dlg-form').close();
+    } catch (err) {
+      $('form-msg').textContent = 'Not saved: ' + ((err && (err.message || err.code)) || 'error') + '.';
+    } finally { btns.forEach((b) => { b.disabled = false; }); }
+  }
+  $('f-save').addEventListener('click', () => saveTicket(false));
+  $('form').addEventListener('submit', (e) => { e.preventDefault(); saveTicket(canSubmit()); });
+
+  // Account usage at the start and end of each stage (written by the orchestrator). It is account-wide,
+  // so the difference also includes anything else running at the same time.
+  function usageRows(u) {
+    if (!u) return [];
+    const one = (r) => (r && (typeof r.five_hour === 'number' || typeof r.seven_day === 'number'))
+      ? '5-hour ' + (typeof r.five_hour === 'number' ? Math.round(r.five_hour) + '%' : '—') + ' · weekly ' + (typeof r.seven_day === 'number' ? Math.round(r.seven_day) + '%' : '—') + (r.at ? ' · ' + fmt(r.at) : '')
+      : '—';
+    const rows = [];
+    for (const [key, label] of [['planning', 'Planning'], ['coding', 'Coding'], ['review', 'Review']]) {
+      const x = u[key]; if (!x) continue;
+      rows.push(h('dt', null, label + ' usage start'), h('dd', null, one(x.start)));
+      rows.push(h('dt', null, label + ' usage end'), h('dd', null, x.end ? one(x.end) : 'running'));
+    }
+    return rows;
+  }
+
+  // ---------- detail ----------
+  let openId = null; let unsubReplies = null; let replies = [];
+  let unsubComments = null; let comments = [];
+  const commentDrafts = {}; // per ticket: { text, ask } so a draft survives tab switches and refreshes
+  const commentStatus = {}; // per ticket: last composer status line ("Posted.", …), kept across re-renders
+  const commentPosting = new Set(); // tickets with a comment post in flight
+  let detailTab = 'request';
+  // Change-log entries for the open ticket, read from every person's own log.
+  let ticketLog = []; let unsubLogs = [];
+  function watchTicketLog(id) {
+    unsubLogs.forEach((u) => u()); unsubLogs = []; ticketLog = [];
+    const ids = [...new Set([...(state.people || []).map((p) => p.id), state.me && state.me.id].filter(Boolean))];
+    const per = {};
+    for (const uid of ids) {
+      try {
+        unsubLogs.push(state.db.collection('logs/' + uid + '/entries').where('ticket', '==', id).onSnapshot((snap) => {
+          per[uid] = snap.docs.map((d) => ({ ...d.data(), by: uid }));
+          ticketLog = Object.values(per).flat();
+          resolveNames(ids);
+          if (openId === id) renderDetail();
+        }, () => {}));
+      } catch (_) { /* that person's log is unreadable */ }
+    }
+  }
+  function openDetail(id) {
+    openId = id; replies = [];
+    watchTicketLog(id);
+    const st0 = statusOf(id);
+    detailTab = st0 === 'Plan ready' || st0 === 'Approved' ? 'plan' : (['PR open', 'Reviewing', 'Done', 'Coding', 'Queued'].includes(st0) ? 'code' : 'request');
+    comments = [];
+    if (unsubComments) unsubComments();
+    unsubComments = state.db.collection('tickets/' + id + '/comments').onSnapshot((snap) => {
+      comments = snap.docs.map((d) => ({ ...d.data(), _id: d.id })).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      resolveNames(comments.map((c) => c.author_id));
+      if (openId === id) renderDetail();
+    }, () => {});
+    if (unsubReplies) unsubReplies();
+    unsubReplies = state.db.collection('tickets/' + id + '/replies').onSnapshot((snap) => {
+      replies = snap.docs.map((d) => d.data()).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+      resolveNames(replies.map((r) => r.author_id));
+      if (openId === id) renderDetail();
+    }, () => {});
+    renderDetail();
+    if (!$('dlg-detail').open) $('dlg-detail').showModal();
+  }
+  $('dlg-detail').addEventListener('close', () => {
+    openId = null;
+    unsubLogs.forEach((u) => u()); unsubLogs = []; ticketLog = [];
+    if (unsubReplies) { unsubReplies(); unsubReplies = null; }
+    if (unsubComments) { unsubComments(); unsubComments = null; }
+  });
+
+  function renderDetail() {
+    const id = openId; if (!id) return;
+    const t = state.tickets.get(id); if (!t) { $('dlg-detail').close(); return; }
+    const s = state.st.get(id) || {}; const status = statusOf(id);
+    const isAuthor = state.me && t.author_id === state.me.id;
+    $('d-id').textContent = id; $('d-title').textContent = t.title || 'Untitled';
+    $('d-meta').replaceChildren(h('span', { class: 'pill ' + (TONE[status] || '') }, status),
+      h('span', null, cap(t.type || 'feature') + ' · ' + cap(t.priority || 'medium') + ' · ' + nameOf(t.author_id)),
+      ...(s.size ? [h('span', { class: 'pill' }, 'Size ' + s.size)] : []));
+    const keepAnswer = $('d-answer') ? $('d-answer').value : ''; const keepChanges = $('d-changes') ? $('d-changes').value : '';
+    const draft = commentDrafts[id] || { text: '', ask: status !== 'Draft' };
+    const body = $('d-body'); body.replaceChildren(); const foot = $('d-foot'); foot.replaceChildren();
+    const msg = h('span', { class: 'msg', role: 'status' }); const left = h('div', { class: 'foot-left' }); foot.append(left, msg);
+
+    if (s.note && (PAUSED.includes(status) || status === 'Needs info')) {
+      body.append(h('div', { class: 'callout bad' }, md(s.note)));
+    }
+    if (status === WAIT) {
+      body.append(h('div', { class: 'callout warn' }, md(s.note || 'Waiting: account usage is above the limit set in Settings. Claude starts this ticket automatically when usage drops.')));
+    }
+    if (status === 'Needs info' && s.questions && s.questions.length) {
+      const box = h('div', { class: 'callout warn' }, h('strong', null, 'Claude needs answers'),
+        h('ol', { class: 'questions' }, s.questions.map((q) => h('li', null, q))));
+      body.append(box);
+    }
+    // ---- tabs: Request (what was asked), Plan (Claude's brief + plan), Details (PRs, facts, history)
+    const tabs = { request: [], plan: [], code: [], details: [] };
+    tabs.request.push(h('section', { class: 'block' }, h('h4', null, 'Description'), md(t.description || '')));
+    // Ticket options the author or owner can change until Done: PR screenshots, and a Claude review after the PRs open.
+    for (const [field, domId, label] of [['screenshots', 'd-shots', 'Add screenshots to the PRs when possible'], ['claude_review', 'd-review', 'Claude reviews the PRs before you']]) {
+      const canToggle = (isAuthor || state.owner) && state.canWrite && !isArchived(id) && status !== 'Done';
+      const cb = h('input', { type: 'checkbox', id: domId, disabled: !canToggle });
+      cb.checked = !!t[field];
+      cb.addEventListener('change', async () => {
+        cb.disabled = true;
+        try { await state.db.doc('tickets/' + id).update({ [field]: cb.checked, ...stamp() }); logChange(id, label + (cb.checked ? ': on' : ': off')); }
+        catch (err) { cb.checked = !cb.checked; msg.textContent = 'Not changed: ' + ((err && err.code) || 'error') + '.'; }
+        cb.disabled = false;
+      });
+      tabs.request.push(h('label', { class: 'toggle' }, cb, ' ' + label));
+    }
+    if (t.source === 'chat') tabs.request.push(h('div', { class: 'empty-col' }, 'Created from a Claude conversation.'));
+    tabs.request.push(linksSection(id, t, s, (isAuthor || isAdmin()) && state.canWrite && !isArchived(id), msg));
+    if (t.attachments && t.attachments.length) {
+      tabs.request.push(h('section', { class: 'block' }, h('h4', null, 'Attachments'),
+        h('div', { class: 'thumbs' }, t.attachments.map((a, i) => attachmentView(a, i, false)))));
+    }
+    if (replies.length) {
+      tabs.request.push(h('section', { class: 'block' }, h('h4', null, 'Answers to Claude'),
+        replies.map((r) => h('div', { class: 'reply' }, h('span', { class: 'by' }, nameOf(r.author_id) + ' · ' + fmt(r.at)), h('div', null, r.text)))));
+    }
+    if (s.brief) tabs.plan.push(h('section', { class: 'block' }, h('h4', null, 'Brief (written by Claude)'), md(s.brief)));
+    if (s.plan) tabs.plan.push(h('section', { class: 'block' }, h('h4', null, 'Plan' + (s.plan_rev ? ' · revision ' + s.plan_rev : '')), md(s.plan)));
+    if (!tabs.plan.length) tabs.plan.push(h('div', { class: 'empty-col' }, status === 'Draft' ? 'Submit the ticket and Claude writes a plan.' : 'Claude has not written a plan yet.'));
+    // Code tab: what the coding session produced (PRs, branch, its screenshots).
+    if (s.prs && Object.keys(s.prs).length) {
+      tabs.code.push(h('section', { class: 'block' }, h('h4', null, 'Pull requests'),
+        h('dl', { class: 'kv' }, Object.entries(s.prs).flatMap(([side, url]) => [
+          h('dt', null, repoLabel(side)),
+          h('dd', null, h('a', { href: url, target: '_blank', rel: 'noopener' }, url),
+            ...((s.merged || []).includes(side) ? [['good', 'merged']] : (prPills((s.pr_status || {})[side]).length ? prPills((s.pr_status || {})[side]) : [['', 'draft / open']]))
+              .map(([tone, label]) => h('span', { class: 'pill ' + tone, style: 'margin-left:6px' }, label)),
+            (s.pr_status || {})[side] && (s.pr_status || {})[side].at ? h('span', { style: 'margin-left:6px;color:var(--muted);font-size:12px' }, 'checked ' + fmt((s.pr_status || {})[side].at)) : null)]))));
+    }
+    if (status === 'Reviewing' || s.review_summary) {
+      tabs.code.push(h('section', { class: 'block' }, h('h4', null, 'Claude review'),
+        status === 'Reviewing' ? h('div', { class: 'empty-col' }, 'Claude is reviewing the PRs. Its comments appear on GitHub and its summary here.') : null,
+        s.review_summary ? md(s.review_summary) : null));
+    }
+    if (s.scope || s.branch) {
+      tabs.code.push(h('section', { class: 'block' }, h('h4', null, 'Branch'), h('dl', { class: 'kv' },
+        s.scope ? [h('dt', null, 'Repos'), h('dd', null, s.scope.map((x) => repoLabel(x)).join(', '))] : null,
+        s.branch ? [h('dt', null, 'Branch'), h('dd', null, h('code', null, s.branch))] : null)));
+    }
+    const shots = Array.isArray(s.screenshots) ? s.screenshots.filter((x) => x && x.asset_id) : [];
+    if (shots.length) {
+      tabs.code.push(h('section', { class: 'block' }, h('h4', null, 'Screenshots by Claude'),
+        h('div', { class: 'shots' }, shots.map((x) => h('figure', null,
+          h('a', { href: '/_blob/' + x.asset_id, target: '_blank', rel: 'noopener' }, h('img', { src: '/_blob/' + x.asset_id, alt: x.caption || 'Screenshot' })),
+          h('figcaption', null, (x.caption || ''), x.mode ? h('span', { class: 'pill', style: 'margin-left:6px' }, x.mode === 'stubbed' ? 'stubbed data' : 'real data') : null))))));
+    }
+    if (!tabs.code.length) tabs.code.push(h('div', { class: 'empty-col' }, ['Coding', 'Queued', 'Approved'].includes(status) ? 'Claude is coding. PRs and screenshots appear here.' : 'No code yet. PRs and screenshots appear here once the plan is approved and coded.'));
+    tabs.details.push(h('section', { class: 'block' }, h('h4', null, 'Details'), h('dl', { class: 'kv' },
+      h('dt', null, 'Status'), h('dd', null, status),
+      h('dt', null, 'Author'), h('dd', null, nameOf(t.author_id)),
+      h('dt', null, 'Created'), h('dd', null, fmt(t.created_at) || '—'),
+      t.submitted_at ? [h('dt', null, 'Submitted'), h('dd', null, fmt(t.submitted_at))] : null,
+      s.effort && s.effort.plan_minutes ? [h('dt', null, 'Planning'), h('dd', null, s.effort.plan_minutes + ' min')] : null,
+      s.effort && s.effort.code_minutes ? [h('dt', null, 'Coding'), h('dd', null, s.effort.code_minutes + ' min')] : null,
+      ...usageRows(s.usage))));
+    // History: Claude's events plus the change log (who did what on the board), newest first.
+    const evs = [
+      ...state.events.filter((e) => e.ticket === id).map((e) => ({ at: e.at, who: 'Claude', text: e.text || e.kind })),
+      ...ticketLog.map((e) => ({ at: e.at, who: nameOf(e.by), text: e.action + (e.detail ? ': ' + e.detail : '') })),
+    ].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    tabs.details.push(h('section', { class: 'block' }, h('h4', null, 'History'), evs.length
+      ? h('div', { class: 'events' }, evs.map((e) => h('div', null, h('time', { datetime: e.at }, fmt(e.at)), h('span', null, h('strong', null, e.who), ' ', e.text))))
+      : h('div', { class: 'empty-col' }, 'Nothing yet.')));
+
+    // Comments tab: a thread anyone with edit access can post to; "Ask Claude" routes it to the ticket's session.
+    tabs.comments = [];
+    tabs.comments.push(h('div', { class: 'thread' }, comments.length ? comments.map((c) => h('div', { class: 'comment' + (c.from_claude ? ' claude' : '') },
+      h('div', { class: 'by' }, c.from_claude ? 'Claude' : nameOf(c.author_id), ' · ', fmt(c.at),
+        c.to_claude && !c.from_claude ? h('span', { class: 'pill ' + (c.handled_at ? 'good' : (c.needs_details_at ? 'warn' : 'accent')), style: 'margin-left:6px' },
+          c.handled_at ? 'handled by Claude' : (c.needs_details_at ? 'Claude needs details' : 'sent to Claude')) : null),
+      h('div', { class: 'text' }, c.text || '')))
+      : h('div', { class: 'empty-col' }, 'No comments yet. Ask a question, give feedback on the plan, or request a change on the PRs.')));
+    if (state.canWrite && state.me && state.me.id && !isArchived(id)) {
+      const cta = h('textarea', { id: 'd-comment', rows: '3', 'aria-label': 'Write a comment', placeholder: ['PR open', 'Coding'].includes(status) ? 'e.g. "On the dashboard, make the greeting bold"' : 'Write a comment' });
+      cta.value = draft.text;
+      const ask = h('input', { type: 'checkbox', id: 'd-comment-ask' }); ask.checked = draft.ask;
+      cta.addEventListener('input', () => { commentDrafts[id] = { text: cta.value, ask: ask.checked }; });
+      ask.addEventListener('change', () => { commentDrafts[id] = { text: cta.value, ask: ask.checked }; });
+      // The new comment's snapshot re-renders this composer mid-post, so status, busy state and the
+      // text box are looked up live by id (and kept per ticket), never through the captured elements.
+      const cmsg = h('span', { class: 'msg', role: 'status', id: 'd-comment-msg' }, commentStatus[id] || '');
+      const setCmsg = (txt) => { commentStatus[id] = txt; const el = openId === id && $('d-comment-msg'); if (el) el.textContent = txt; };
+      const setBusy = (on) => { if (on) commentPosting.add(id); else commentPosting.delete(id); const b = openId === id && $('d-comment-post'); if (b) b.disabled = on; };
+      tabs.comments.push(h('section', { class: 'block composer' }, cta,
+        h('div', { class: 'row-between' },
+          h('label', { class: 'toggle' }, ask, ' Ask Claude to act on it' + (['PR open', 'Coding'].includes(status) ? ' (changes the PR)' : '')),
+          h('div', { class: 'actions' }, cmsg, h('button', { type: 'button', class: 'primary', id: 'd-comment-post', disabled: commentPosting.has(id), onclick: async () => {
+            const box = $('d-comment'); const text = (box ? box.value : '').trim();
+            if (!text) { setCmsg('Write a comment first.'); return; }
+            const askNow = $('d-comment-ask') ? $('d-comment-ask').checked : ask.checked;
+            // Clear the draft before writing, so the re-render the write triggers shows an empty box.
+            commentDrafts[id] = { text: '', ask: askNow }; if (box) box.value = '';
+            setBusy(true); setCmsg('Posting…');
+            try {
+              await state.db.collection('tickets/' + id + '/comments').add({ author_id: state.me.id, text, at: nowIso(), to_claude: askNow });
+              logChange(id, askNow ? 'commented (sent to Claude)' : 'commented', text.slice(0, 140));
+              if (askNow) {
+                const res = await sendToClaude('Comment ' + id + ': ' + text.slice(0, 300), $('d-body'));
+                setCmsg(res.ok ? 'Posted and sent to Claude.' : 'Posted. ' + res.reason);
+              } else setCmsg('Posted.');
+            } catch (err) {
+              // Not saved: give the text back so nothing typed is lost.
+              commentDrafts[id] = { text, ask: askNow };
+              const live = openId === id && $('d-comment'); if (live && !live.value) live.value = text;
+              setCmsg('Not posted: ' + ((err && err.code) || 'error') + '.');
+            }
+            setBusy(false);
+          } }, 'Post comment')))));
+    }
+    const TABS = [['request', 'Request'], ['plan', 'Plan'], ['code', 'Code'], ['comments', 'Comments'], ['details', 'Details & history']];
+    if (!tabs[detailTab]) detailTab = 'request';
+    const panel = h('div', { class: 'tabpanel', role: 'tabpanel', id: 'd-panel' }, tabs[detailTab]);
+    const bar = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Ticket sections' }, TABS.map(([key, label]) =>
+      h('button', { type: 'button', role: 'tab', class: 'tab', 'aria-selected': key === detailTab ? 'true' : 'false', 'aria-controls': 'd-panel',
+        onclick: () => { detailTab = key; renderDetail(); } }, label,
+        key === 'request' && t.attachments && t.attachments.length ? h('span', { class: 'count' }, t.attachments.length + (t.attachments.length > 1 ? ' files' : ' file')) : null,
+        key === 'plan' && s.plan_rev ? h('span', { class: 'count' }, 'rev ' + s.plan_rev) : null,
+        key === 'code' && s.prs && Object.keys(s.prs).length ? h('span', { class: 'count' }, Object.keys(s.prs).length + ' PR') : null,
+        key === 'comments' && comments.length ? h('span', { class: 'count' }, String(comments.length)) : null)));
+    body.append(panel);
+
+    // actions by role and status
+    // Draft: Edit opens the form; Submit to Claude submits the ticket as it is (submitters only).
+    if (status === 'Draft' && (isAuthor || state.owner) && state.canWrite) {
+      foot.append(h('button', { type: 'button', onclick: () => { $('dlg-detail').close(); openForm(id); } }, 'Edit'));
+      if (canSubmit()) foot.append(h('button', { type: 'button', class: 'primary', onclick: async (e) => {
+        e.target.disabled = true; msg.textContent = 'Submitting…';
+        try {
+          await state.db.doc('tickets/' + id).update({ submitted_at: nowIso(), ...stamp() });
+          logChange(id, 'submitted');
+          const res = await sendToClaude('Submit ' + id + ': ' + (t.title || ''), $('d-body'));
+          msg.textContent = res.ok ? 'Submitted. Claude starts planning.' : 'Submitted. ' + res.reason;
+        } catch (err) { msg.textContent = 'Not submitted: ' + ((err && err.code) || 'error') + '.'; e.target.disabled = false; }
+      } }, 'Submit to Claude'));
+    }
+    if ((status === 'Needs info' || status === 'AI paused – needs decision') && state.canWrite) {
+      const ta = h('textarea', { id: 'd-answer', rows: '4', 'aria-label': 'Your answers' }); ta.value = keepAnswer;
+      body.prepend(h('section', { class: 'block' }, h('h4', null, 'Your answers'), ta));
+      foot.append(h('button', { type: 'button', class: 'primary', onclick: async (e) => {
+        const text = ta.value.trim(); if (!text) { msg.textContent = 'Write your answers first.'; return; }
+        e.target.disabled = true; msg.textContent = 'Sending…';
+        try {
+          await state.db.collection('tickets/' + id + '/replies').add({ author_id: state.me.id, text, at: nowIso() });
+          logChange(id, 'answered Claude', text.slice(0, 140));
+          const res = await sendToClaude('Resubmit ' + id + ': answers added', $('d-body'));
+          msg.textContent = res.ok ? 'Sent. Claude picks it up now.' : res.reason; ta.value = '';
+        } catch (err) { msg.textContent = 'Not sent: ' + ((err && err.code) || 'error') + '.'; }
+        e.target.disabled = false;
+      } }, 'Send answers to Claude'));
+    }
+    if (canApprove() && status === 'Plan ready') {
+      const ta = h('textarea', { id: 'd-changes', rows: '3', 'aria-label': 'Changes to request' }); ta.value = keepChanges;
+      body.prepend(h('div', { class: 'callout accent' }, h('strong', null, 'Approve this plan to start coding (draft PRs). Or request changes:'), ta));
+      foot.append(h('button', { type: 'button', onclick: async (e) => {
+        const text = ta.value.trim(); if (!text) { msg.textContent = 'Write the changes first.'; return; }
+        e.target.disabled = true; msg.textContent = 'Sending…';
+        const res = await sendToClaude('Changes for ' + id + ' (plan revision ' + s.plan_rev + '): ' + text, $('d-body'));
+        logChange(id, 'requested plan changes (revision ' + s.plan_rev + ')', text.slice(0, 140));
+        msg.textContent = res.ok ? 'Sent. Claude revises the plan.' : res.reason; if (res.ok) ta.value = '';
+        e.target.disabled = false;
+      } }, 'Request changes'));
+      foot.append(h('button', { type: 'button', class: 'primary', onclick: async (e) => {
+        e.target.disabled = true; msg.textContent = 'Approving…';
+        try {
+          const vote = { [id]: { plan_rev: s.plan_rev || 0, at: nowIso() } };
+          const vref = state.db.doc('approval_votes/' + state.me.id);
+          const vsnap = await vref.get();
+          if (vsnap.exists) await vref.update(vote); else await vref.set(vote);
+          if (state.owner) await state.db.doc('approvals/' + id).set({ approved_by: state.me.id, at: nowIso(), plan_rev: s.plan_rev || 0 });
+          logChange(id, 'approved plan revision ' + (s.plan_rev || 0));
+          const res = await sendToClaude('Approve ' + id + ' (plan revision ' + (s.plan_rev || 0) + ')', $('d-body'));
+          msg.textContent = res.ok ? 'Approved. Coding starts shortly.' : res.reason;
+        } catch (err) { msg.textContent = 'Not approved: ' + ((err && err.code) || 'error') + '.'; e.target.disabled = false; }
+      } }, 'Approve plan'));
+    }
+    if (canApprove() && PAUSED.includes(status)) {
+      foot.append(h('button', { type: 'button', class: 'primary', onclick: async (e) => {
+        e.target.disabled = true; msg.textContent = 'Sending…';
+        const res = await sendToClaude('Continue ' + id, $('d-body'));
+        logChange(id, 'clicked Continue');
+        msg.textContent = res.ok ? 'Sent. Claude resumes this ticket.' : res.reason; e.target.disabled = false;
+      } }, 'Continue'));
+    }
+    // Tabs go first so they are always the first thing seen; action boxes sit between them and the panel.
+    body.prepend(bar);
+
+    // archive / delete
+    const archived = isArchived(id);
+    if (archived) $('d-meta').prepend(h('span', { class: 'pill' }, 'Archived'));
+    const busy = ACTIVE.includes(status) && !archived;
+    // Archiving or deleting closes the ticket's unmerged PRs (the orchestrator does it); branches are deleted by hand on GitHub.
+    const sides = Object.keys(s.prs || {}); const merged = s.merged || [];
+    const unmerged = sides.filter((x) => !merged.includes(x));
+    const gitNote = unmerged.length
+      ? 'Claude closes its ' + (unmerged.length > 1 ? unmerged.length + ' unmerged PRs' : 'unmerged PR') + '. Delete the branch on GitHub afterwards if you don\'t need it.'
+      : '';
+    if ((state.owner || isAuthor) && state.canWrite) {
+      const doArchive = async (e) => {
+        e.target.disabled = true;
+        try {
+          // Tell Claude first, while the click still counts as a fresh gesture: it archives the ticket's sessions.
+          const sent = archived ? { ok: true } : await sendToClaude('Archive ' + id + ': archive its sessions', $('d-body'));
+          await state.db.doc('tickets/' + id).update({ archived_at: archived ? null : nowIso(), ...stamp() });
+          logChange(id, archived ? 'unarchived' : 'archived');
+          msg.textContent = archived ? 'Restored to the board.' : (sent.ok ? 'Archived. Claude archives its sessions.' : 'Archived. ' + sent.reason);
+          if (!archived && !$('show-archived').checked) $('dlg-detail').close();
+        } catch (err) { msg.textContent = 'Not changed: ' + ((err && err.code) || 'error') + '.'; }
+        e.target.disabled = false;
+      };
+      left.append(h('button', { type: 'button', onclick: (e) => {
+        if (busy) { msg.textContent = 'Claude is working on this ticket. Archive it once it is paused or done.'; return; }
+        if (archived || !gitNote) { doArchive(e); return; }
+        if (foot.querySelector('.confirm')) return;
+        const box = h('div', { class: 'confirm', role: 'alert' },
+          h('span', null, 'Archive ' + id + '? ' + gitNote),
+          h('button', { type: 'button', class: 'danger', onclick: (ev) => { box.remove(); doArchive(ev); } }, 'Archive'),
+          h('button', { type: 'button', onclick: () => box.remove() }, 'Keep'));
+        foot.prepend(box);
+      } }, archived ? 'Unarchive' : 'Archive'));
+    }
+    if (state.owner) {
+      left.append(h('button', { type: 'button', class: 'danger', onclick: () => {
+        if (busy) { msg.textContent = 'Claude is working on this ticket. Delete it once it is paused or done.'; return; }
+        if (foot.querySelector('.confirm')) return;
+        const box = h('div', { class: 'confirm', role: 'alert' },
+          h('span', null, 'Delete ' + id + ' for good? Its plan, answers, history and screenshots are removed. ' + (gitNote || 'Claude closes any unmerged PR.') + ' Merged PRs and branches stay.'),
+          h('button', { type: 'button', class: 'danger', onclick: async (e) => {
+            e.target.disabled = true; msg.textContent = 'Deleting…';
+            // Tell Claude first, while the click still counts as a fresh gesture: it archives the ticket's sessions.
+            const sent = await sendToClaude('Delete ' + id + ': archive its sessions', $('cols'));
+            if (!sent.ok) notice('Ticket deleted. ' + sent.reason);
+            try { await deleteTicket(id); } catch (err) { msg.textContent = 'Delete failed: ' + ((err && (err.code || err.message)) || 'error') + '. Some parts may remain.'; e.target.disabled = false; }
+          } }, 'Delete permanently'),
+          h('button', { type: 'button', onclick: () => box.remove() }, 'Keep'));
+        foot.prepend(box);
+      } }, 'Delete'));
+    }
+  }
+
+  // ---------- usage ----------
+  // Usage is read by the orchestrator (only Claude sessions can see it) and written to config/runtime.usage.
+  // Refresh asks the orchestrator for a new reading; each refresh is one short orchestrator turn.
+  let usageAsked = 0; let usageMsg = '';
+  const ago = (iso) => {
+    const d = new Date(iso); if (!iso || isNaN(d)) return 'never';
+    const m = Math.round((Date.now() - d) / 60000);
+    return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : fmt(iso);
+  };
+  const resetIn = (iso) => {
+    const d = new Date(iso); if (!iso || isNaN(d)) return '';
+    const m = Math.round((d - Date.now()) / 60000);
+    if (m <= 0) return 'resets now';
+    return 'resets in ' + (m < 60 ? m + ' min' : m < 2880 ? Math.round(m / 60) + ' h' : Math.round(m / 1440) + ' days');
+  };
+  function meter(label, pct, limit, resets) {
+    const has = typeof pct === 'number';
+    const tone = !has ? '' : (limit && pct >= limit ? 'bad' : (limit && pct >= limit * 0.8 ? 'warn' : ''));
+    return h('span', { class: 'meter', title: resets ? fmt(resets) : '' }, label + ' ',
+      h('span', { class: 'track', role: 'meter', 'aria-label': label + ' usage', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': has ? String(pct) : null },
+        h('span', { class: 'fill ' + tone, style: 'width:' + (has ? Math.min(100, Math.max(0, pct)) : 0) + '%' })),
+      h('span', { class: 'num' }, has ? Math.round(pct) + '%' : '—'),
+      resets ? h('span', null, resetIn(resets)) : null);
+  }
+  function renderUsage() {
+    const box = $('usage-bar'); if (!box) return;
+    const u = (state.runtime && state.runtime.usage) || {};
+    const limit = (state.config && state.config.usage_hold_pct) || 0;
+    const canAsk = state.canWrite && state.comments;
+    const wait = !!usageAsked && Date.now() - usageAsked < 60000;
+    box.replaceChildren(...[
+      h('strong', null, 'Usage'),
+      meter('5-hour', u.five_hour, limit, u.five_hour_resets_at),
+      meter('Weekly', u.seven_day, limit, u.seven_day_resets_at),
+      h('span', null, limit ? 'Hold above ' + limit + '%' : 'No hold limit'),
+      u.held ? h('span', { class: 'held' }, 'New sessions on hold') : null,
+      h('span', null, 'Checked ' + ago(u.at)),
+      canAsk ? h('button', { type: 'button', disabled: wait, onclick: async () => {
+        usageAsked = Date.now(); usageMsg = 'Asked Claude for a new reading…'; renderUsage();
+        const res = await sendToClaude('Refresh usage', $('usage-bar'));
+        usageMsg = res.ok ? 'Asked Claude for a new reading…' : res.reason.replace('Saved, but not sent', 'Not sent');
+        renderUsage(); setTimeout(() => { usageMsg = ''; renderUsage(); }, 60000);
+      } }, 'Refresh') : null,
+      usageMsg ? h('span', { role: 'status' }, usageMsg) : null,
+      healthChip()].filter(Boolean));
+  }
+
+  // ---------- pipeline health (config/runtime.health, written by the orchestrator on every wake) ----------
+  // { at, watching, skill_version, repo_skill_version, last_reconcile_at, daily_next, hourly_next,
+  //   pending_checks, sessions: [{ticket, stage, status, id}], problems: [text] }
+  function healthState() {
+    const hh = (state.runtime && state.runtime.health) || null;
+    if (!hh || !hh.at) return { tone: '', label: 'Unknown', why: ['The orchestrator has not reported its health yet.'] };
+    const why = [...(hh.problems || [])];
+    const ageH = (Date.now() - new Date(hh.at)) / 3600000;
+    if (ageH > 26) why.unshift('The orchestrator has not woken for ' + Math.round(ageH) + ' hours: its scheduled checks may be gone. Restart it.');
+    if (hh.watching === false) why.unshift('The orchestrator is not watching the board: button clicks will not reach it. Restart it.');
+    if (hh.repo_skill_version && hh.skill_version && hh.repo_skill_version !== hh.skill_version) why.push('The orchestrator runs skill ' + hh.skill_version + ' but the repo has ' + hh.repo_skill_version + ': upload the skill and restart.');
+    const bad = hh.watching === false || ageH > 26;
+    return { tone: bad ? 'bad' : (why.length ? 'warn' : 'good'), label: bad ? 'Needs attention' : (why.length ? why.length + (why.length > 1 ? ' warnings' : ' warning') : 'OK'), why, hh };
+  }
+  function healthChip() {
+    const st = healthState();
+    return h('button', { type: 'button', class: 'health-chip', onclick: openHealth, 'aria-label': 'Pipeline health: ' + st.label },
+      h('span', { class: 'dot ' + st.tone, 'aria-hidden': 'true' }), 'Pipeline: ' + st.label);
+  }
+  function openHealth() { renderHealth(); $('h-msg').textContent = ''; $('h-run').hidden = !(state.canWrite && state.comments); $('dlg-health').showModal(); }
+  function renderHealth() {
+    const st = healthState(); const hh = st.hh || {};
+    const stageLabel = { planning: 'Planning', coding: 'Coding', review: 'Review' };
+    $('h-body').replaceChildren(
+      h('div', { class: 'callout ' + (st.tone === 'good' ? 'accent' : (st.tone || 'warn')) },
+        h('strong', null, st.tone === 'good' ? 'Everything looks fine.' : 'Pipeline: ' + st.label),
+        st.why.length ? h('ul', { class: 'problems' }, st.why.map((x) => h('li', null, x))) : null),
+      (hh.notes || []).length ? h('section', { class: 'block' }, h('h4', null, 'Notes'), h('ul', { class: 'problems' }, hh.notes.map((x) => h('li', null, x)))) : null,
+      h('section', { class: 'block' }, h('h4', null, 'Orchestrator'), h('dl', { class: 'kv' },
+        h('dt', null, 'Last report'), h('dd', null, hh.at ? fmt(hh.at) + ' (' + ago(hh.at) + ')' : '—'),
+        h('dt', null, 'Watching the board'), h('dd', null, hh.watching === undefined ? '—' : (hh.watching ? 'Yes' : 'No')),
+        h('dt', null, 'Last full check'), h('dd', null, fmt(hh.last_reconcile_at) || '—'),
+        h('dt', null, 'Next daily check'), h('dd', null, fmt(hh.daily_next) || '—'),
+        h('dt', null, 'Next hourly check'), h('dd', null, fmt(hh.hourly_next) || '—'),
+        h('dt', null, 'Pending ticket checks'), h('dd', null, hh.pending_checks == null ? '—' : String(hh.pending_checks)),
+        h('dt', null, 'Skill version'), h('dd', null, (hh.skill_version || '—') + (hh.repo_skill_version ? ' (repo: ' + hh.repo_skill_version + ')' : '')))),
+      h('section', { class: 'block' }, h('h4', null, 'Running sessions'),
+        (hh.sessions || []).length
+          ? h('dl', { class: 'kv' }, (hh.sessions || []).flatMap((x) => [h('dt', null, x.ticket + ' · ' + (stageLabel[x.stage] || x.stage)), h('dd', null, x.status || '—')]))
+          : h('div', { class: 'empty-col' }, 'None right now.')));
+  }
+  $('h-run').addEventListener('click', async () => {
+    $('h-run').disabled = true; $('h-msg').textContent = 'Asking Claude…';
+    const res = await sendToClaude('Health check', $('h-body'));
+    $('h-msg').textContent = res.ok ? 'Asked. Claude runs a full check and updates this in a minute.' : res.reason;
+    setTimeout(() => { $('h-run').disabled = false; }, 60000);
+  });
+
+  // ---------- theme (per viewer, kept in this browser) ----------
+  const hostTheme = document.documentElement.getAttribute('data-theme');
+  const THEMES = ['system', 'light', 'dark'];
+  let themeMode = 'system';
+  try { themeMode = THEMES.includes(localStorage.getItem('ai-tickets.theme')) ? localStorage.getItem('ai-tickets.theme') : 'system'; } catch (_) { /* no storage */ }
+  function applyTheme() {
+    const root = document.documentElement;
+    if (themeMode === 'system') { if (hostTheme) root.setAttribute('data-theme', hostTheme); else root.removeAttribute('data-theme'); }
+    else root.setAttribute('data-theme', themeMode);
+    $('btn-theme').textContent = 'Theme: ' + cap(themeMode);
+  }
+  $('btn-theme').addEventListener('click', () => {
+    themeMode = THEMES[(THEMES.indexOf(themeMode) + 1) % THEMES.length];
+    try { localStorage.setItem('ai-tickets.theme', themeMode); } catch (_) { /* no storage */ }
+    applyTheme();
+  });
+  applyTheme();
+
+  // ---------- branding (config/branding, set by admins in Settings) ----------
+  // { accent: '#rrggbb', logo_light: asset id, logo_dark: asset id }. Missing = the default colour and no logo.
+  const DEFAULT_ACCENT = '#079759';
+  const DEFAULT_LOGO = { light: '', dark: '' };
+  const isHex = (x) => /^#[0-9a-fA-F]{6}$/.test(String(x || ''));
+  function brandCss(hex) {
+    const n = parseInt(hex.slice(1), 16); const r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    const fgOn = lum > 0.6 ? '#10201a' : '#ffffff';
+    const dark = '--brand:' + hex + ';--accent:color-mix(in srgb,' + hex + ' 68%,#ffffff);--accent-soft:color-mix(in srgb,' + hex + ' 24%,#1b2520);--accent-fg:#06150e;';
+    return ':root{--brand:' + hex + ';--accent:color-mix(in srgb,' + hex + ' 86%,#000000);--accent-soft:color-mix(in srgb,' + hex + ' 15%,#ffffff);--accent-fg:' + fgOn + ';}'
+      + '@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){' + dark + '}}'
+      + ':root[data-theme="dark"]{' + dark + '}';
+  }
+  function applyBranding() {
+    const b = state.branding || {};
+    let tag = $('brand-style');
+    if (isHex(b.accent) && b.accent.toLowerCase() !== DEFAULT_ACCENT) {
+      if (!tag) { tag = document.createElement('style'); tag.id = 'brand-style'; document.body.append(tag); } // after the page's own styles, so it wins
+      tag.textContent = brandCss(b.accent);
+    } else if (tag) tag.remove();
+    const light = document.querySelector('.brand .logo.light'); const dark = document.querySelector('.brand .logo.dark');
+    const has = !!(b.logo_light || b.logo_dark);
+    light.hidden = dark.hidden = !has; document.querySelector('.brand .sep').hidden = !has;
+    light.alt = dark.alt = (state.company && state.company.name) || 'Logo';
+    if (has) {
+      light.src = '/_blob/' + (b.logo_light || b.logo_dark);
+      dark.src = '/_blob/' + (b.logo_dark || b.logo_light);
+    } else { light.removeAttribute('src'); dark.removeAttribute('src'); }
+  }
+  let brandDraft = {};
+  function renderBrandDraft() {
+    const pl = brandDraft.logo_light || brandDraft.logo_dark; const pd = brandDraft.logo_dark || brandDraft.logo_light;
+    $('b-prev-light').hidden = !pl; $('b-prev-dark').hidden = !pd;
+    if (pl) $('b-prev-light').src = '/_blob/' + pl; if (pd) $('b-prev-dark').src = '/_blob/' + pd;
+    const hex = isHex(brandDraft.accent) ? brandDraft.accent : DEFAULT_ACCENT;
+    $('b-accent').value = hex; $('b-accent-hex').value = hex;
+    for (const id of ['b-logo-light', 'b-logo-dark']) $(id).disabled = !state.assets;
+    if (!state.assets) $('b-msg').textContent = 'Logo upload needs edit access to the board page.';
+  }
+  for (const [inputId, key] of [['b-logo-light', 'logo_light'], ['b-logo-dark', 'logo_dark']]) {
+    $(inputId).addEventListener('change', async (e) => {
+      const f = e.target.files[0]; if (!f || !state.assets) return;
+      $('b-msg').textContent = 'Uploading…';
+      try { const r = await state.assets.upload(f); brandDraft[key] = r.id; $('b-msg').textContent = 'Uploaded. Click Save to apply.'; }
+      catch (err) { $('b-msg').textContent = 'Could not upload ' + f.name + ' (' + ((err && err.code) || 'error') + ').'; }
+      e.target.value = ''; renderBrandDraft();
+    });
+  }
+  $('b-clear-light').addEventListener('click', () => { delete brandDraft.logo_light; renderBrandDraft(); });
+  $('b-clear-dark').addEventListener('click', () => { delete brandDraft.logo_dark; renderBrandDraft(); });
+  $('b-accent').addEventListener('input', () => { brandDraft.accent = $('b-accent').value; $('b-accent-hex').value = brandDraft.accent; });
+  $('b-accent-hex').addEventListener('change', () => { const v = $('b-accent-hex').value.trim(); if (isHex(v)) { brandDraft.accent = v; $('b-accent').value = v; } else $('b-msg').textContent = 'Use a colour like #079759.'; });
+  $('b-reset').addEventListener('click', () => { brandDraft = {}; renderBrandDraft(); $('b-msg').textContent = 'Back to the default look. Click Save to apply.'; });
+
+  // ---------- roles and permissions ----------
+  function applyRoles() {
+    if (!state.me) return;
+    const sub = state.canWrite && canSubmit(); const appr = canApprove();
+    $('who').textContent = !state.canWrite ? 'View only' : (appr ? 'You approve plans' : (sub ? 'You can submit tickets' : 'You can comment'));
+    $('btn-new').disabled = !sub || !state.me.id;
+    $('btn-new').title = sub ? '' : 'Ask ' + ownerName() + ' for submitter access';
+    $('f-submit').hidden = !sub;
+    $('btn-settings').hidden = !isAdmin();
+    $('btn-perms').hidden = !isAdmin();
+    $('btn-backups').hidden = !state.owner;
+    if (!isAdmin()) { if ($('dlg-perms').open) $('dlg-perms').close(); if ($('dlg-settings').open) $('dlg-settings').close(); }
+  }
+  // Each person who can write is listed in people/<id> so the owner can give them roles. Written at most once a day.
+  async function recordVisit() {
+    if (!state.canWrite || !state.me || !state.me.id) return;
+    try {
+      const ref = state.db.doc('people/' + state.me.id); const snap = await ref.get();
+      const now = nowIso();
+      // owner: display only (marks the owner's row in Permissions); permissions never trust it.
+      if (!snap.exists) await ref.set({ first_seen: now, last_seen: now, owner: state.owner });
+      else if (Date.now() - new Date(snap.data().last_seen || 0) > 86400000 || !!snap.data().owner !== state.owner) await ref.update({ last_seen: now, owner: state.owner });
+    } catch (_) { /* not recorded: the owner can still see them once they write */ }
+  }
+  let permDraft = {};
+  function openPerms() {
+    const cur = (state.roles && state.roles.people) || {};
+    permDraft = {};
+    for (const p of state.people) permDraft[p.id] = roleOf(p.id);
+    for (const id of Object.keys(cur)) if (!permDraft[id]) permDraft[id] = roleOf(id);
+    $('p-msg').textContent = '';
+    renderPerms();
+    loadBoardLog();
+    $('dlg-perms').showModal();
+  }
+  // Board-wide entries (no ticket) from everyone's change log: permissions, settings, branding, restores.
+  async function loadBoardLog() {
+    const box = $('p-log');
+    const ids = [...new Set([...(state.people || []).map((p) => p.id), state.me && state.me.id].filter(Boolean))];
+    const all = [];
+    for (const uid of ids) {
+      try { const snap = await state.db.collection('logs/' + uid + '/entries').where('ticket', '==', null).get(); snap.docs.forEach((d) => all.push({ ...d.data(), by: uid })); }
+      catch (_) { /* skip */ }
+    }
+    all.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+    box.replaceChildren(...(all.length ? all.slice(0, 20).map((e) => h('div', null, h('time', { datetime: e.at }, fmt(e.at)), h('span', null, h('strong', null, nameOf(e.by)), ' ', e.action + (e.detail ? ': ' + e.detail : ''))))
+      : [h('div', { class: 'empty-col' }, 'No changes recorded yet.')]));
+  }
+  function renderPerms() {
+    const rows = $('p-rows'); rows.replaceChildren();
+    // The owner is the viewer when the owner opens this; for an admin, the owner has no row to edit.
+    const ownerId = state.owner ? state.me.id : ((state.people.find((p) => p.owner) || {}).id || null);
+    const ids = [...new Set([ownerId, ...state.people.map((p) => p.id), ...Object.keys(permDraft)])].filter(Boolean);
+    const seen = Object.fromEntries(state.people.map((p) => [p.id, p.last_seen]));
+    ids.sort((a, b) => (a === ownerId ? -1 : b === ownerId ? 1 : (nameOf(a) || '').localeCompare(nameOf(b) || '')));
+    for (const id of ids) {
+      const isMe = id === ownerId;
+      if (!permDraft[id]) permDraft[id] = roleOf(id);
+      const box = (key) => {
+        const cb = h('input', { type: 'checkbox', disabled: isMe, 'aria-label': nameOf(id) + ' ' + key });
+        cb.checked = isMe ? true : !!permDraft[id][key];
+        cb.addEventListener('change', () => { permDraft[id][key] = cb.checked; });
+        return cb;
+      };
+      rows.append(h('tr', null,
+        h('td', null, isMe ? nameOf(id) + (state.owner ? ' (you, owner)' : ' (owner)') : (id === state.me.id ? nameOf(id) + ' (you)' : nameOf(id))),
+        h('td', null, box('submitter')), h('td', null, box('approver')), h('td', null, box('admin')),
+        h('td', { style: 'color:var(--muted)' }, isMe ? '—' : (fmt(seen[id]) || '—'))));
+    }
+    if (ids.length <= 1) rows.append(h('tr', null, h('td', { colspan: '5', style: 'color:var(--muted)' }, 'Nobody else has opened the board yet.')));
+  }
+  $('p-save').addEventListener('click', async () => {
+    const ownerId = state.owner ? state.me.id : ((state.people.find((p) => p.owner) || {}).id || null);
+    const people = {};
+    for (const [id, r] of Object.entries(permDraft)) if (id !== ownerId) people[id] = { submitter: !!r.submitter, approver: !!r.approver, admin: !!r.admin };
+    $('p-save').disabled = true; $('p-msg').textContent = 'Saving…';
+    try {
+      if (state.owner) {
+        await state.db.doc('config/roles').set({ ...(state.roles || {}), people, updated_at: nowIso(), updated_by: state.me.id });
+        logChange(null, 'changed permissions', rolesDiff((state.roles || {}).people || {}, people));
+        $('dlg-perms').close();
+      } else {
+        const r = await sendSettingsRequest({ roles: { people } });
+        logChange(null, 'requested permission changes', rolesDiff((state.roles || {}).people || {}, people));
+        $('p-msg').textContent = r; return;
+      }
+    }
+    catch (err) { $('p-msg').textContent = 'Not saved: ' + ((err && err.code) || 'error') + '.'; }
+    $('p-save').disabled = false;
+  });
+
+  function rolesDiff(a, b) {
+    const out = [];
+    for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      const x = { submitter: true, approver: false, admin: false, ...(a[id] || {}) }; const y = { submitter: true, approver: false, admin: false, ...(b[id] || {}) };
+      const ch = ['submitter', 'approver', 'admin'].filter((k) => !!x[k] !== !!y[k]).map((k) => (y[k] ? '+' : '−') + k);
+      if (ch.length) out.push(nameOf(id) + ': ' + ch.join(' '));
+    }
+    return out.join('; ') || 'no change';
+  }
+  // Admins who are not the owner can't write config: their change goes to settings_requests/<their id>
+  // (only they can write it), and the orchestrator applies it after checking they are an admin.
+  async function sendSettingsRequest(change) {
+    const ref = state.db.doc('settings_requests/' + state.me.id);
+    const body = { ...change, at: nowIso(), status: 'pending' };
+    const snap = await ref.get();
+    if (snap.exists) await ref.set({ ...body }); else await ref.set(body);
+    const res = await sendToClaude('Apply settings request from ' + (nameOf(state.me.id) || 'an admin'), $('cols'));
+    return res.ok ? 'Sent. Claude checks you are an admin, applies it within a minute and posts in Slack.' : 'Saved as a request. ' + res.reason;
+  }
+
+  // Read-only view of the company settings. They are edited in the company repo, not here.
+  function renderCompanySettings() {
+    const c = state.company; const box = $('c-body');
+    if (!c) { box.replaceChildren(h('div', { class: 'empty-col' }, 'Not received yet: the orchestrator writes them from the company repo (ai-tickets/config.yml and repos.md) when it starts.')); return; }
+    const yes = (v) => (v ? 'On' : 'Off');
+    box.replaceChildren(
+      h('dl', { class: 'kv' },
+        h('dt', null, 'Company'), h('dd', null, c.name || '—'),
+        h('dt', null, 'Owner'), h('dd', null, c.owner_name || '—'),
+        h('dt', null, 'Ticket ids'), h('dd', null, (c.prefix || '—') + '-1, ' + (c.prefix || '—') + '-2…'),
+        h('dt', null, 'Time zone'), h('dd', null, c.timezone || '—'),
+        h('dt', null, 'Slack'), h('dd', null, yes(c.slack_enabled)),
+        h('dt', null, 'Screenshots'), h('dd', null, yes(c.screenshots_enabled)),
+        h('dt', null, 'Backups'), h('dd', null, c.backups && c.backups.repo ? c.backups.repo + ' (' + (c.backups.branch || '') + ')' : '—')),
+      h('div', { class: 'settings-wrap' }, h('table', { class: 'settings-table' },
+        h('thead', null, h('tr', null, ['Repo', 'GitHub', 'PRs into', 'Release'].map((x) => h('th', null, x)))),
+        h('tbody', null, (c.repos || []).map((r) => h('tr', null, h('td', null, r.label || r.key), h('td', null, r.repo || '—'), h('td', null, h('code', null, r.pr_target || '—')), h('td', null, h('code', null, r.release || '—'))))))),
+      h('div', { class: 'empty-col' }, 'To change these, edit ai-tickets/config.yml or repos.md in the company repo; the orchestrator applies them on its next daily check or restart.' + (c.updated_at ? ' Last received ' + fmt(c.updated_at) + '.' : '')));
+  }
+
+  // ---------- settings ----------
+  function openSettings() {
+    const cfg = (state.config && state.config.stages) || {};
+    const rows = $('s-rows'); rows.replaceChildren();
+    for (const st of STAGES) {
+      const c = cfg[st.key] || {};
+      rows.append(h('tr', null,
+        h('td', null, st.label),
+        h('td', null, h('input', { type: 'text', id: 's-model-' + st.key, value: c.model || (st.alias ? 'opus' : 'claude-opus-5-5'), 'aria-label': st.label + ' model' })),
+        h('td', null, st.alias ? h('span', { style: 'color:var(--muted)' }, 'as coding') : (() => {
+          const sel = h('select', { id: 's-effort-' + st.key, 'aria-label': st.label + ' effort' }, ['low', 'medium', 'high', 'xhigh', 'max'].map((v) => h('option', { value: v }, v)));
+          sel.value = c.effort || 'medium'; return sel; })()),
+        h('td', null, st.cap ? h('input', { type: 'text', inputmode: 'numeric', class: 'num', id: 's-cap-' + st.key, value: String(c.cap_minutes || ({ planning: 15, review: 20 }[st.key] || 45)), 'aria-label': st.label + ' time cap' }) : h('span', { style: 'color:var(--muted)' }, '—'))));
+    }
+    $('s-parallel').value = String((state.config && state.config.max_parallel_coding) || 3);
+    $('s-usage').value = state.config && state.config.usage_hold_pct ? String(state.config.usage_hold_pct) : '';
+    $('s-msg').textContent = ''; $('b-msg').textContent = '';
+    renderCompanySettings();
+    brandDraft = { ...(state.branding || {}) }; delete brandDraft.updated_at; delete brandDraft.updated_by;
+    renderBrandDraft();
+    $('dlg-settings').showModal();
+  }
+  $('s-save').addEventListener('click', async () => {
+    const stages = {};
+    for (const st of STAGES) {
+      const o = { model: $('s-model-' + st.key).value.trim() };
+      if (!st.alias) o.effort = $('s-effort-' + st.key).value;
+      if (st.cap) { const n = parseInt($('s-cap-' + st.key).value, 10); if (!(n > 0)) { $('s-msg').textContent = st.label + ': time cap must be a positive number.'; return; } o.cap_minutes = n; }
+      if (!o.model) { $('s-msg').textContent = st.label + ': model is required.'; return; }
+      stages[st.key] = o;
+    }
+    const par = parseInt($('s-parallel').value, 10);
+    if (!(par > 0)) { $('s-msg').textContent = 'Coding sessions at once must be a positive number.'; return; }
+    const usageRaw = $('s-usage').value.trim();
+    const usage = usageRaw === '' ? 0 : parseInt(usageRaw, 10);
+    if (!(usage >= 0 && usage <= 100)) { $('s-msg').textContent = 'Usage limit must be a number from 0 to 100 (0 or empty = off).'; return; }
+    $('s-save').disabled = true; $('s-msg').textContent = 'Saving…';
+    try {
+      const nextModels = { ...(state.config || {}), max_parallel_coding: par, stages, usage_hold_pct: usage };
+      delete nextModels.updated_at; delete nextModels.updated_by;
+      const nextBrand = {};
+      if (isHex(brandDraft.accent) && brandDraft.accent.toLowerCase() !== DEFAULT_ACCENT) nextBrand.accent = brandDraft.accent.toLowerCase();
+      if (brandDraft.logo_light) nextBrand.logo_light = brandDraft.logo_light;
+      if (brandDraft.logo_dark) nextBrand.logo_dark = brandDraft.logo_dark;
+      const cur = state.branding || {};
+      const brandChanged = JSON.stringify([cur.accent, cur.logo_light, cur.logo_dark]) !== JSON.stringify([nextBrand.accent, nextBrand.logo_light, nextBrand.logo_dark]);
+      const curModels = { ...(state.config || {}) }; delete curModels.updated_at; delete curModels.updated_by;
+      const modelsChanged = JSON.stringify(curModels) !== JSON.stringify(nextModels);
+      if (!modelsChanged && !brandChanged) { $('dlg-settings').close(); $('s-save').disabled = false; return; }
+      const what = [modelsChanged ? 'models and limits' : '', brandChanged ? 'branding' : ''].filter(Boolean).join(' and ');
+      if (state.owner) {
+        if (modelsChanged) await state.db.doc('config/models').set({ ...nextModels, updated_at: nowIso(), updated_by: state.me.id });
+        if (brandChanged) await state.db.doc('config/branding').set({ ...nextBrand, updated_at: nowIso(), updated_by: state.me.id });
+        logChange(null, 'changed ' + what);
+        $('dlg-settings').close();
+      } else {
+        const r = await sendSettingsRequest({ ...(modelsChanged ? { models: nextModels } : {}), ...(brandChanged ? { branding: nextBrand } : {}) });
+        logChange(null, 'requested a change to ' + what);
+        $('s-msg').textContent = r;
+      }
+    }
+    catch (err) { $('s-msg').textContent = 'Not saved: ' + ((err && err.code) || 'error') + '.'; }
+    $('s-save').disabled = false;
+  });
+
+  async function deleteTicket(id) {
+    const t = state.tickets.get(id) || {};
+    if (unsubReplies) { unsubReplies(); unsubReplies = null; }
+    if (unsubComments) { unsubComments(); unsubComments = null; }
+    const cms = await state.db.collection('tickets/' + id + '/comments').get();
+    for (const d of cms.docs) await state.db.doc('tickets/' + id + '/comments/' + d.id).delete();
+    const reps = await state.db.collection('tickets/' + id + '/replies').get();
+    for (const d of reps.docs) await state.db.doc('tickets/' + id + '/replies/' + d.id).delete();
+    for (const e of state.events.filter((x) => x.ticket === id)) await state.db.doc('events/' + e._id).delete();
+    await state.db.doc('approvals/' + id).delete();
+    await state.db.doc('ticket_state/' + id).delete();
+    // Attachments and screenshots are kept in the board's file storage, so restoring the ticket from a backup brings them back.
+    await state.db.doc('tickets/' + id).delete();
+    logChange(id, 'deleted the ticket', t.title || '');
+    $('dlg-detail').close();
+  }
+
+  // ---------- wiring ----------
+  $('search').addEventListener('input', render);
+  try { const saved = JSON.parse(localStorage.getItem('ai-tickets.filters') || '{}'); for (const k of FILTER_IDS) if (saved[k] && k !== 'fl-author') $(k).value = saved[k]; } catch (_) { /* no storage */ }
+  for (const k of FILTER_IDS) $(k).addEventListener('change', () => { try { localStorage.setItem('ai-tickets.filters', JSON.stringify(readFilters())); } catch (_) { /* no storage */ } render(); });
+  $('fl-clear').addEventListener('click', () => { for (const k of FILTER_IDS) $(k).value = ''; try { localStorage.removeItem('ai-tickets.filters'); } catch (_) { /* no storage */ } render(); });
+  try { $('show-archived').checked = localStorage.getItem('ai-tickets.showArchived') === '1'; } catch (_) { /* no storage */ }
+  $('show-archived').addEventListener('change', () => {
+    try { localStorage.setItem('ai-tickets.showArchived', $('show-archived').checked ? '1' : '0'); } catch (_) { /* no storage */ }
+    render();
+  });
+  document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close]')) d.close();
+  }));
+  // A click on the backdrop (outside the ticket panel) closes the ticket.
+  $('dlg-detail').addEventListener('click', (e) => {
+    if (e.target !== $('dlg-detail')) return;
+    const r = $('dlg-detail').getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (!inside || !e.clientX) $('dlg-detail').close();
+  });
+  $('btn-new').addEventListener('click', () => openForm(null));
+  $('btn-settings').addEventListener('click', openSettings);
+  $('btn-perms').addEventListener('click', openPerms);
+  $('btn-reports').addEventListener('click', openReports);
+  for (const id of ['btn-backups', 'btn-perms', 'btn-settings']) $(id).addEventListener('click', () => { $('more-menu').open = false; });
+  document.addEventListener('click', (e) => { if (!e.target.closest('#more-menu')) $('more-menu').open = false; });
+  $('btn-backups').addEventListener('click', openBackups);
+
+  function listen(path, onDocs) {
+    state.db.collection(path).onSnapshot((snap) => onDocs(snap.docs), (err) => notice('Could not load ' + path + ' (' + ((err && err.code) || 'error') + ').', true));
+  }
+
+  async function start() {
+    const use = (n) => (window.claude && window.claude.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null));
+    const [db, user, comments, assets] = await Promise.all([use('db'), use('user'), use('comments'), use('assets')]);
+    Object.assign(state, { db, user, comments, assets });
+    if (!db) { notice('The board data is not available in this view. Open it on claude.ai while signed in.', true); state.loaded = true; render(); return; }
+    try { state.me = user ? await user.me() : { id: null, isOwner: false, canEdit: false }; } catch (_) { state.me = { id: null }; }
+    state.owner = !!(state.me && state.me.isOwner);
+    const canWrite = user ? await user.can('data.write').catch(() => null) : null;
+    state.canWrite = canWrite !== false;
+    applyRoles();
+    state.db.doc('config/company').onSnapshot((snap) => { state.company = snap.exists ? snap.data() : null; applyCompany(); applyBranding(); render(); if (openId) renderDetail(); }, () => {});
+    state.db.doc('config/branding').onSnapshot((snap) => { state.branding = snap.exists ? snap.data() : null; applyBranding(); }, () => {});
+    state.db.doc('config/roles').onSnapshot((snap) => { state.roles = snap.exists ? snap.data() : null; applyRoles(); render(); if (openId) renderDetail(); }, () => {});
+    listen('people', (docs) => { state.people = docs.map((d) => ({ id: d.id, ...d.data() })); resolveNames(state.people.map((x) => x.id)); if ($('dlg-perms').open) renderPerms(); });
+    recordVisit();
+    if (state.canWrite && !comments) notice('Comments are not available here, so submissions will wait for the daily check.');
+
+    const timer = setTimeout(() => { if (!state.loaded) { state.loaded = true; render(); } }, 10000);
+    listen('tickets', (docs) => {
+      state.tickets = new Map(docs.map((d) => [d.id, d.data()]));
+      state.loaded = true; clearTimeout(timer); fillAuthorFilter();
+      resolveNames(docs.map((d) => d.data().author_id)); render(); if (openId) renderDetail();
+    });
+    listen('ticket_state', (docs) => { state.st = new Map(docs.map((d) => [d.id, d.data()])); if (!(state.company && state.company.repos)) fillRepoFilter(); render(); if (openId) renderDetail(); });
+    listen('approvals', (docs) => { state.approvals = new Map(docs.map((d) => [d.id, d.data()])); render(); if (openId) renderDetail(); });
+    listen('approval_votes', (docs) => { state.votes = new Map(docs.map((d) => [d.id, d.data()])); render(); if (openId) renderDetail(); });
+    listen('events', (docs) => { state.events = docs.map((d) => ({ ...d.data(), _id: d.id })); if (openId) renderDetail(); });
+    state.db.doc('config/models').onSnapshot((snap) => { state.config = snap.exists ? snap.data() : null; }, () => {});
+    // The orchestrator writes the last usage reading to config/runtime.usage; the bar updates live when it does.
+    state.db.doc('config/runtime').onSnapshot((snap) => { state.runtime = snap.exists ? snap.data() : null; renderUsage(); if ($('dlg-health').open) renderHealth(); }, () => {});
+    renderUsage();
+    setInterval(renderUsage, 60000); // keeps "checked … ago" and reset times current
+    render();
+  }
+  render();
+  start();
+})();
+</script>
+
+</body></html>

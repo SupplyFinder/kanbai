@@ -1,0 +1,33 @@
+# KanbAI: company settings. `/kanbai setup` fills this file in; you can edit it.
+# Format: .claude/skills/kanbai/company-files.md
+
+company: ""                    # e.g. Acme
+owner_name: ""                 # first name of the board owner
+board_url: ""                  # written by setup when it publishes the board
+ticket_prefix: ""              # e.g. ACME → tickets ACME-1, ACME-2…
+timezone: ""                   # e.g. Europe/Paris
+session_tag: KanbAI            # tag on every pipeline session
+
+github_owner: ""               # GitHub organisation or user
+company_repo: ""               # owner/repo of this repo
+
+schedules:                     # cron fields, in `timezone`
+  daily: "47 6 * * *"          # daily reconcile and backup
+  hourly: "13 8-20 * * 1-5"    # hourly reconcile in working hours (remove to turn off)
+
+slack:
+  enabled: false
+  channel: ""                  # channel id; bot token in the SLACK_BOT_TOKEN environment variable
+
+backups:
+  repo: ""                     # private owner/repo for the daily backup
+  branch: daily
+
+screenshots:
+  enabled: false
+  repo: ""                     # owner/repo where PR screenshots are committed (e.g. this repo)
+  branch: screenshots
+
+forbidden_repos: []            # owner/repo entries Claude must never read or change
+
+dry_run: false                 # true: code is pushed to branches but no PR is opened
