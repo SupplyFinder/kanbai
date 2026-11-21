@@ -9,11 +9,16 @@
 - Setup ends with three sections: Connectors, a "Defaults used" table (setting, value, where to change),
   and What's left for you.
 - The orchestrator attaches only the product repos named in the message that starts it
-  (`Attach with push access: …`, given ready to paste by setup). In Auto mode an unnamed repo could be
-  refused even though `add_repo` is allowed; a missing repo is now a Health problem that says how to fix it.
-- Ticket sessions are told in their first message which repos they may attach (push for coding, read
-  for planning and review). Auto mode judges `add_repo` from the session's own messages, so an attach
-  was sometimes refused; a coding session now pauses instead of retrying when that happens.
+  (`Attach with push access: …`, given ready to paste by setup); a missing repo is a Health problem that
+  says how to fix it.
+- Fix: coding sessions were refused when attaching product repos with push access. The skill's own text
+  (coding, orchestrator and setup instructions, and the "Attach with push access" lines the orchestrator
+  added to each session's first message) said that attaching a repo needs a person to name it; the session
+  reads that text before attaching, and its permission check then refused the attach. Those sentences and
+  lines are gone: ticket sessions start with only `/kanbai <stage> T-n`, `board:` and `orchestrator:`, and
+  attach the repos in `repos.md` as part of their task. A failed attach still pauses the ticket.
+- Setup stops watching the board right after publishing it, so the first submitted ticket wakes the
+  orchestrator, not the setup session.
 - The hourly check's message names the KanbAI board (it said "AI tickets board").
 - Setup asks whether to make the chat skill available to the whole organisation (published as a
   `kanbai` plugin) or only to you (a zip to upload as a personal skill).

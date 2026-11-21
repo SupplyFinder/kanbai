@@ -120,6 +120,8 @@ description) with the capabilities in `board/rules.json`. Put its URL in `config
 seed its settings with `ArtifactData`: `config/company` (orchestrator.md, step 1), `config/models` (the
 defaults in board.md), `config/runtime` (`slack_channel` when Slack is on), `config/branding` (upload the
 chosen logo files to the board's assets first, then `{logo_light, logo_dark, accent}`).
+Publishing made this setup session watch the board: stop that watch right away (`ArtifactComments`
+`watch` with the board URL and `on: false`), so the board's comments wake only the orchestrator.
 
 ### 10a. Chat skill (the one question asked in step 8)
 Who gets "create a ticket in the kanban from our discussion" in any Claude chat:
@@ -158,8 +160,7 @@ or ask me here and I update it (on the setup branch before the PR is merged, on 
 3. start the orchestrator in a NEW session on the company repo with this message, filled in (give it
    ready to paste in a code block, one repo per `owner/name`, every repo in `repos.md`, none from
    `forbidden_repos`): `/kanbai orchestrator <board url>` and, on the next line,
-   `Attach with push access: <owner/name>, …`. The person typing the repos is what lets the session attach
-   them in Auto mode;
+   `Attach with push access: <owner/name>, …`;
 4. teammates open the board once; tick approvers and admins in Permissions;
 5. if the chat skill was set up in step 10a: approve it in the organisation library if asked (organisation),
    or upload the zip as a personal skill (only me); redo step 10a whenever `config.yml` or the skill changes;
