@@ -49,14 +49,11 @@ remember of earlier turns.
 3a. Product repos: the session starts with only the company repo in its GitHub scope. Attach the repos the
    owner named in the message that started you (a line `Attach with push access: …`, from setup's hand-over),
    one at a time, `add_repo` with `access: "push"` (closing a PR is a GitHub API write; you never push code),
-   and only those: never a repo the owner did not name or one in `forbidden_repos`. Auto mode judges
-   `add_repo` from what a person asked this session, so a repo nobody named can be refused even though
-   `.claude/settings.json` allows the tool. No clone is needed: you only use the GitHub tools (if `add_repo`
-   asks for a clone, use `--depth 1` into `/home/user/<name>`).
-   - A repo in `repos.md` that was not named, or whose attach is refused → a Health problem, never a reason
-     to stop, with the fix in its text: "<repo> is not attached: send this session `Attach with push access:
-     <repo>` (or start the orchestrator again with the line from setup), then run a Health check". Do not
-     retry a refused attach on your own; try again only when the owner sends such a line.
+   and only those: never a repo the owner did not name or one in `forbidden_repos`. No clone is needed:
+   you only use the GitHub tools (if `add_repo` asks for a clone, use `--depth 1` into `/home/user/<name>`).
+   - A repo in `repos.md` that was not named, or whose attach fails → a Health problem, never a reason to
+     stop: "<repo> is not attached: start the orchestrator again with the line from setup". Do not retry on
+     your own.
    - On each daily reconcile, list the `repos.md` repos still not attached in the same Health problem.
 4. Branch protection: for every repo in `repos.md`, `list_branches` and read whether its PR target and
    release branch are `protected` (one check when they are the same branch). Repeat on each daily reconcile
@@ -281,11 +278,7 @@ the owner or an approver can approve. You never write `approvals/` or `approval_
    `https://github.com/<company_repo>` (so the session loads the permission rules, this skill and the
    company files), title `T-n planning` / `T-n coding` / `T-n review`, tags `[<session_tag>]`, and prompt:
    `/kanbai planning T-n` (or `coding`, `review`) followed by lines `board: <board url>` and
-   `orchestrator: <your session id>`. For coding (and a Continue of coding) add the lines
-   `Attach with push access (add_repo, access "push"): <owner/name of each repo in scope>` and, if any,
-   `Attach read-only: <owner/name of each "Depends on" repo not in scope>`; for planning and review,
-   `Attach read-only: <owner/name of every repo in repos.md>`. The session's permission check only sees
-   its own messages, so the repos it may attach must be named there; never list a `forbidden_repos` one.
+   `orchestrator: <your session id>`.
 3. Write to `ticket_state`: `plan_session_id` / `code_session_id` / `review_session_id`, status
    (`Investigating` / `Coding` / `Reviewing`; for review also `review_state: "running"`),
    `status_at`, `deadline_at` = now + `cap_minutes`, and `usage.<planning|coding|review>` = `{start: <reading>}`
