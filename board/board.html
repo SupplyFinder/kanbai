@@ -104,13 +104,20 @@
   }
   .card:hover { border-color: var(--accent); transform: translateY(-1px); }
   .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Drag and drop: a dragged card fades; columns it can go to are outlined, the one under the pointer filled. */
+  .card[draggable="true"] { cursor: grab; }
+  .card.dragging { opacity: .45; }
+  .col.drop-ok { outline: 2px dashed var(--accent); outline-offset: -2px; }
+  .col.drop-over { background: var(--accent-soft); }
+  .col.drop-no { opacity: .35; filter: grayscale(1); }
+  @media (prefers-reduced-motion: no-preference) { .col { transition: opacity .12s ease, filter .12s ease; } }
   .card .title { line-height: 1.35; }
   .prio { display: inline-flex; align-items: center; gap: 5px; }
   .prio::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--muted); }
   .prio.high { color: var(--bad); font-weight: 600; } .prio.high::before { background: var(--bad); }
   .prio.medium::before { background: var(--warn); }
   .card .top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-  .tid { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+  .tid { font-family: var(--font-mono); font-size: 12px; color: var(--muted); white-space: nowrap; flex: none; }
   .card .title { font-weight: 600; overflow-wrap: anywhere; }
   .dmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); padding-top: 6px; }
   .card .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
@@ -124,6 +131,12 @@
   .pill.warn { background: var(--warn-soft); color: var(--warn); }
   .pill.bad { background: var(--bad-soft); color: var(--bad); }
   .pill.info { background: var(--info-soft); color: var(--info); }
+  /* Three pulsing dots on the status pill while Claude is working on the ticket. */
+  .dots { display: inline-flex; gap: 2px; margin-left: 2px; }
+  .dots i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: .3; animation: dotpulse 1.2s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes dotpulse { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .8; } }
   input.search { font: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); width: 220px; max-width: 100%; }
   label.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; white-space: nowrap; }
   label.toggle input { accent-color: var(--accent); }
@@ -299,6 +312,7 @@
     </div>
   </div>
   <div id="notice" class="notice" hidden></div>
+  <div id="unsent" class="notice" hidden></div>
   <div id="usage-bar" class="usage" aria-label="Account usage"></div>
 </header>
 
@@ -349,8 +363,9 @@
         <input type="file" id="f-files" accept="image/*,application/pdf,text/csv,text/plain,text/markdown,application/json,.csv,.txt,.md,.json" multiple>
         <div class="thumbs" id="f-thumbs"></div>
       </div>
-      <label class="toggle"><input type="checkbox" id="f-shots"> Add screenshots to the PRs when possible <span class="hint" style="color:var(--muted)">(visible UI changes only; takes longer)</span></label>
-      <label class="toggle"><input type="checkbox" id="f-review"> Claude reviews the PRs before you <span class="hint" style="color:var(--muted)">(an extra review session after the PRs open; uses more usage)</span></label>
+      <label class="toggle"><input type="checkbox" id="f-shots"> Add screenshots to the PRs when possible <span class="hint" style="color:var(--muted)">(takes longer)</span></label>
+      <label class="toggle"><input type="checkbox" id="f-review"> Claude reviews the PRs before you <span class="hint" style="color:var(--muted)">(takes longer &amp; uses more usage)</span></label>
+      <label class="toggle" id="f-auto-row" hidden><input type="checkbox" id="f-auto"> Auto-approve the plan <span class="hint" style="color:var(--muted)">(auto start coding after planning)</span></label>
     </div>
     <div class="dlg-foot">
       <span class="msg" id="form-msg" role="status"></span>
@@ -359,6 +374,17 @@
       <button type="submit" class="primary" id="f-submit">Submit to Claude</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlg-confirm" aria-labelledby="cf-title" style="width:min(460px, calc(100vw - 32px))">
+  <div class="dlg">
+    <div class="dlg-head"><h3 id="cf-title">Mark done?</h3></div>
+    <div class="dlg-body"><p id="cf-text" style="margin:0"></p></div>
+    <div class="dlg-foot">
+      <button type="button" id="cf-cancel">Keep</button>
+      <button type="button" class="primary" id="cf-ok">Mark done</button>
+    </div>
+  </div>
 </dialog>
 
 <dialog id="dlg-detail" aria-labelledby="d-title">
@@ -597,7 +623,7 @@
   ];
 
   const state = { db: null, user: null, comments: null, assets: null, me: null, owner: false, canWrite: false,
-    tickets: new Map(), st: new Map(), approvals: new Map(), events: [], config: null, runtime: null, roles: null, branding: null, company: null, votes: new Map(), myRequest: null, people: [], names: {}, loaded: false };
+    tickets: new Map(), st: new Map(), approvals: new Map(), events: [], config: null, runtime: null, roles: null, branding: null, company: null, votes: new Map(), cmt: new Map(), myRequest: null, people: [], names: {}, loaded: false };
 
   // Roles live in config/roles = { people: { <user id>: { submitter, approver } } }, written by the owner.
   // Someone with no entry is a submitter (the default), not an approver, not an admin. The owner is always all three.
@@ -616,7 +642,7 @@
     n.textContent = text; n.className = 'notice' + (bad ? ' bad' : ''); n.hidden = false;
   }
 
-  function statusOf(id) {
+  function baseStatus(id) {
     const t = state.tickets.get(id) || {};
     const s = state.st.get(id);
     if (s && s.status) {
@@ -625,6 +651,105 @@
     }
     return t.submitted_at ? 'Submitted' : 'Draft';
   }
+  // tickets/<id>.claude_pending_at: set when someone sends Claude a comment, answers, changes or Continue.
+  // Until Claude acts (status changes, or the orchestrator clears it) the card shows Claude at work.
+  // Stale after 30 minutes, in case a wake was missed: the ticket then shows its real status again.
+  const PENDING_MS = 30 * 60000;
+  // Pending ends when Claude writes a new status: compared by value (status and status_at as they were when the
+  // mark was set), never by clock, since a session's status_at can be ahead of real time.
+  function pendingFor(id) {
+    const t = state.tickets.get(id) || {}; const s = state.st.get(id) || {};
+    const p = t.claude_pending_at; if (!p) return false;
+    const at = new Date(p).getTime();
+    if (!isFinite(at) || Date.now() - at > PENDING_MS) return false;
+    const was = t.claude_pending_from;
+    if (was) return (s.status || '') === (was.status || '') && (s.status_at || '') === (was.status_at || '');
+    return !s.status_at || new Date(s.status_at).getTime() < at;
+  }
+  function statusOf(id) {
+    const st = baseStatus(id);
+    if (st !== 'Done' && doneRequested(id)) return 'Done';
+    if (!pendingFor(id)) return st;
+    const s = state.st.get(id) || {};
+    if (st === 'Plan ready' || st === 'Needs info') return 'Investigating';
+    if (st === 'PR open' || st === 'Reviewing') return 'Coding';
+    if (PAUSED.includes(st)) return s.code_session_id ? 'Coding' : 'Investigating';
+    return st;
+  }
+  async function markPending(id) {
+    const s = state.st.get(id) || {};
+    try { await state.db.doc('tickets/' + id).update({ claude_pending_at: nowIso(), claude_pending_from: { status: s.status || '', status_at: s.status_at || '' } }); }
+    catch (_) { /* display only */ }
+  }
+  // Submitted but Claude was never told (the send failed): no state after 2 minutes.
+  const unsent = (id) => {
+    const t = state.tickets.get(id) || {};
+    if (!t.submitted_at || state.st.has(id) || isArchived(id) || pendingFor(id)) return false;
+    return Date.now() - new Date(t.submitted_at).getTime() > 2 * 60000;
+  };
+  function renderUnsent() {
+    const box = $('unsent');
+    const ids = state.canWrite && state.comments ? [...state.tickets.keys()].filter(unsent) : [];
+    if (!ids.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.replaceChildren(h('span', null, (ids.length > 1 ? ids.join(', ') + ' are' : ids[0] + ' is') + ' submitted but Claude has not been told yet (otherwise it waits for the next scheduled check). '),
+      h('button', { type: 'button', class: 'primary', style: 'margin-left:8px;padding:4px 12px', onclick: async (e) => {
+        e.target.disabled = true;
+        for (const id of ids) {
+          await markPending(id);
+          const res = await sendToClaude('Submit ' + id + ': ' + ((state.tickets.get(id) || {}).title || ''), $('cols'));
+          if (!res.ok) { notice(res.reason); break; }
+        }
+        renderUnsent();
+      } }, 'Send to Claude now'));
+  }
+  // ---------- comments sent to Claude, shown on the card ----------
+  // Tickets with an "Ask Claude" comment in the last 48 hours are watched, so the card can say
+  // "Comment sent" (waiting), "Claude needs details" or "Claude replied" (until this viewer opens the ticket).
+  const cmtWatch = new Map();
+  function syncCommentWatches() {
+    const want = new Set([...state.tickets].filter(([id, t]) => t.claude_comment_at && !t.archived_at
+      && Date.now() - new Date(t.claude_comment_at).getTime() < 48 * 3600000).map(([id]) => id));
+    for (const [id, unsub] of cmtWatch) if (!want.has(id)) { unsub(); cmtWatch.delete(id); state.cmt.delete(id); }
+    for (const id of want) {
+      if (cmtWatch.has(id)) continue;
+      try {
+        cmtWatch.set(id, state.db.collection('tickets/' + id + '/comments').onSnapshot((snap) => {
+          const all = snap.docs.map((d) => ({ ...d.data(), _id: d.id }));
+          const asks = all.filter((c) => c.to_claude && !c.from_claude);
+          const replies = all.filter((c) => c.from_claude).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+          state.cmt.set(id, {
+            pending: asks.some((c) => !c.handled_at && !c.needs_details_at),
+            needs: asks.some((c) => c.needs_details_at && !c.handled_at),
+            lastReply: replies[0] || null,
+          });
+          if (openId === id) markSeen(id);
+          render();
+        }, () => {}));
+      } catch (_) { /* that ticket's comments are unreadable */ }
+    }
+  }
+  const seenKey = (id) => 'kanbai.seen.' + id;
+  // Seen = the id of the latest Claude reply this viewer had when they last opened the ticket (ids, not times:
+  // Claude's reply times can run ahead of the clock).
+  const seenReply = (id) => { try { return localStorage.getItem(seenKey(id)) || ''; } catch (_) { return ''; } };
+  const markSeen = (id) => {
+    const last = ((state.cmt.get(id) || {}).lastReply || {})._id || '';
+    try { localStorage.setItem(seenKey(id), last); } catch (_) { /* no storage */ }
+  };
+  function commentPill(id) {
+    const c = state.cmt.get(id); if (!c) return null;
+    if (c.pending) return h('span', { class: 'pill accent' }, 'Comment sent');
+    if (c.needs) return h('span', { class: 'pill warn' }, 'Claude needs details');
+    if (c.lastReply && c.lastReply._id !== seenReply(id)) return h('span', { class: 'pill good' }, 'Claude replied');
+    return null;
+  }
+  // Statuses where a Claude session is running right now: the pill gets pulsing dots.
+  const RUNNING = ['Submitted', 'Investigating', 'Approved', 'Coding', 'Reviewing'];
+  // Shown text for a status, when it differs from the status name.
+  const STATUS_LABEL = { Approved: 'Approved, coding starts' };
+  const statusPill = (status, id) => h('span', { class: 'pill ' + (TONE[status] || '') }, STATUS_LABEL[status] || status,
+    RUNNING.includes(status) && !(id && unsent(id)) ? h('span', { class: 'dots', role: 'img', 'aria-label': 'Claude is working' }, h('i'), h('i'), h('i')) : null);
   // An approval counts when the owner's approvals/<id> matches the plan revision, or when someone ticked
   // as Approver (or the owner) voted for this revision under approval_votes/<their id>, a path only they
   // can write. The orchestrator checks the same thing before coding.
@@ -637,9 +762,29 @@
       const vote = v && v[id];
       if (vote && vote.plan_rev === s.plan_rev && (uid === ownerIdKnown() || roleOf(uid).approver)) return uid;
     }
+    // Auto-approve: the ticket is ticked and an owner, approver or admin set it from their own vote document.
+    if ((state.tickets.get(id) || {}).auto_approve && s.plan_rev) {
+      for (const [uid, v] of state.votes) if (autoVoteValid(uid, v && v[id])) return uid;
+    }
     return null;
   }
   function approvalValid(id) { return !!approvalBy(id); }
+  const canAutoApprove = () => canApprove() || isAdmin();
+  const autoVoteValid = (uid, vote) => !!(vote && vote.auto === true && (uid === ownerIdKnown() || roleOf(uid).approver || roleOf(uid).admin));
+  // Who turned auto-approve on for a ticket (a valid auto vote), or null.
+  function autoApprover(id) {
+    if (!(state.tickets.get(id) || {}).auto_approve) return null;
+    for (const [uid, v] of state.votes) if (autoVoteValid(uid, v && v[id])) return uid;
+    return null;
+  }
+  // The auto-approve choice lives in approval_votes/<my id> (a path only I can write), next to my plan votes.
+  async function writeAutoVote(id, on) {
+    const vref = state.db.doc('approval_votes/' + state.me.id);
+    const vsnap = await vref.get();
+    const prev = (vsnap.exists && vsnap.data()[id]) || {};
+    const vote = { [id]: { ...prev, auto: !!on, at: nowIso() } };
+    if (vsnap.exists) await vref.update(vote); else await vref.set(vote);
+  }
   const nameOf = (uid) => (uid && state.names[uid]) || 'Someone';
 
   async function resolveNames(ids) {
@@ -868,7 +1013,7 @@
     const T = then.ticket || {}, N = now.ticket || {}, ST = then.state || {}, SN = now.state || {};
     const items = []; const blocks = [];
     const val = (v) => (v === undefined || v === null || v === '' ? '—' : typeof v === 'boolean' ? (v ? 'on' : 'off') : Array.isArray(v) ? (v.length ? v.join(', ') : '—') : String(v));
-    for (const [k, label] of [['title', 'Title'], ['type', 'Type'], ['priority', 'Priority'], ['screenshots', 'Screenshots'], ['claude_review', 'Claude review']]) {
+    for (const [k, label] of [['title', 'Title'], ['type', 'Type'], ['priority', 'Priority'], ['screenshots', 'Screenshots'], ['claude_review', 'Claude review'], ['auto_approve', 'Auto-approve']]) {
       if (JSON.stringify(T[k] ?? null) !== JSON.stringify(N[k] ?? null)) items.push(label + ': ' + val(T[k]) + ' → ' + val(N[k]));
     }
     if (!!T.archived_at !== !!N.archived_at) items.push(N.archived_at ? 'Archived since' : 'Unarchived since');
@@ -1043,6 +1188,7 @@
   // ---------- board ----------
   function render() {
     const cols = $('cols'); cols.replaceChildren();
+    renderUnsent();
     const all = [...state.tickets.keys()];
     // With no tickets yet, the empty columns still show the stages; the message sits below them.
     $('empty').hidden = !(state.loaded && all.length === 0);
@@ -1075,6 +1221,7 @@
         col.hint ? h('div', { class: 'hint' }, col.hint) : null);
       if (!col.list.length && q) box.append(h('div', { class: 'empty-col' }, 'No match'));
       for (const id of col.list) box.append(card(id));
+      if (!col.archived) wireDrop(box, col.label);
       cols.append(box);
     }
   }
@@ -1106,11 +1253,129 @@
   }
   const ACTIVE = ['Submitted', 'Investigating', 'Approved', 'Queued', 'Coding', 'Reviewing'];
 
+  // ---------- shared actions (detail buttons and drag and drop) ----------
+  // Done is a decision, like approving: the owner, approvers and admins. The orchestrator checks the role again.
+  const canMarkDone = () => state.owner || canApprove() || isAdmin();
+  async function doSubmit(id) {
+    const t = state.tickets.get(id) || {};
+    await state.db.doc('tickets/' + id).update({ submitted_at: nowIso(), ...stamp() });
+    logChange(id, 'submitted');
+    return sendToClaude('Submit ' + id + ': ' + (t.title || ''), $('cols'));
+  }
+  async function doApprove(id) {
+    const s = state.st.get(id) || {};
+    const vote = { [id]: { ...(((state.votes.get(state.me.id) || {})[id]) || {}), plan_rev: s.plan_rev || 0, at: nowIso() } };
+    const vref = state.db.doc('approval_votes/' + state.me.id);
+    const vsnap = await vref.get();
+    if (vsnap.exists) await vref.update(vote); else await vref.set(vote);
+    if (state.owner) await state.db.doc('approvals/' + id).set({ approved_by: state.me.id, at: nowIso(), plan_rev: s.plan_rev || 0 });
+    logChange(id, 'approved plan revision ' + (s.plan_rev || 0));
+    return sendToClaude('Approve ' + id + ' (plan revision ' + (s.plan_rev || 0) + ')', $('cols'));
+  }
+  // Mark done: the request is the voter's own approval_votes entry {done: true} (a path only they can write);
+  // the orchestrator stops the ticket's sessions, closes its unmerged PRs and sets Done.
+  async function doMarkDone(id) {
+    const vref = state.db.doc('approval_votes/' + state.me.id);
+    const vsnap = await vref.get();
+    const prev = (vsnap.exists && vsnap.data()[id]) || {};
+    const vote = { [id]: { ...prev, done: true, done_at: nowIso() } };
+    if (vsnap.exists) await vref.update(vote); else await vref.set(vote);
+    await state.db.doc('tickets/' + id).update({ done_requested_at: nowIso(), done_requested_by: state.me.id, ...stamp() });
+    logChange(id, 'marked done');
+    return sendToClaude('Done ' + id + ': mark it done', $('cols'));
+  }
+  // The page's own confirmation: the browser's confirm() is blocked inside the claude.ai frame and returns false.
+  function askConfirm(title, text, okLabel) {
+    return new Promise((resolve) => {
+      const d = $('dlg-confirm');
+      $('cf-title').textContent = title; $('cf-text').textContent = text; $('cf-ok').textContent = okLabel;
+      const done = (v) => { $('cf-ok').onclick = $('cf-cancel').onclick = null; d.onclose = null; if (d.open) d.close(); resolve(v); };
+      $('cf-ok').onclick = () => done(true); $('cf-cancel').onclick = () => done(false); d.onclose = () => done(false);
+      d.showModal(); $('cf-ok').focus();
+    });
+  }
+  // What marking done does to this ticket, in one sentence for the confirmation.
+  function doneText(id) {
+    const s = state.st.get(id) || {};
+    const open = Object.keys(s.prs || {}).filter((k) => !(s.merged || []).includes(k)).length;
+    return [RUNNING.includes(statusOf(id)) ? 'Claude stops working on it.' : '',
+      open ? 'Claude closes its ' + (open > 1 ? open + ' open PRs' : 'open PR') + ' (merged PRs are kept). Delete the branch on GitHub if you don\'t need it.' : ''].filter(Boolean).join(' ') || 'Nothing else changes.';
+  }
+  // Valid "mark done" request: the ticket asks for it and an owner, approver or admin voted done.
+  function doneRequested(id) {
+    if (!(state.tickets.get(id) || {}).done_requested_at) return false;
+    for (const [uid, v] of state.votes) {
+      const vote = v && v[id];
+      if (vote && vote.done === true && (uid === ownerIdKnown() || roleOf(uid).approver || roleOf(uid).admin)) return true;
+    }
+    return false;
+  }
+  // Which column a card may be dropped on, by status and the viewer's role.
+  function dropAction(id, colLabel) {
+    if (!state.canWrite || !state.me || !state.me.id || isArchived(id)) return null;
+    const t = state.tickets.get(id) || {}; const st = statusOf(id);
+    if (colLabel === 'With Claude' && st === 'Draft' && (t.author_id === state.me.id || state.owner) && canSubmit()) return 'submit';
+    if (colLabel === 'Coding' && st === 'Plan ready' && canApprove()) return 'approve';
+    // Needs info -> With Claude: go ahead without more answers (the author, or an approver).
+    if (colLabel === 'With Claude' && st === 'Needs info' && (t.author_id === state.me.id || canApprove())) return 'proceed';
+    // Paused -> the stage it stopped in: Continue (approvers), like the Continue button.
+    if (PAUSED.includes(st) && canApprove() && colLabel === ((state.st.get(id) || {}).code_session_id ? 'Coding' : 'With Claude')) return 'continue';
+    if (colLabel === 'Done' && st !== 'Done' && canMarkDone()) return 'done';
+    return null;
+  }
+  const canDrag = (id) => ['With Claude', 'Coding', 'Done'].some((c) => dropAction(id, c));
+  async function doProceed(id) {
+    await state.db.collection('tickets/' + id + '/replies').add({ author_id: state.me.id, text: 'No more details for now: go ahead with reasonable assumptions and list them in the plan.', at: nowIso() });
+    logChange(id, 'asked Claude to go ahead without more answers');
+    await markPending(id);
+    return sendToClaude('Resubmit ' + id + ': answers added', $('cols'));
+  }
+  async function doContinue(id) {
+    await markPending(id);
+    logChange(id, 'clicked Continue');
+    return sendToClaude('Continue ' + id, $('cols'));
+  }
+  let dragId = null;
+  async function runDrop(id, action) {
+    const label = { submit: 'Submitted', approve: 'Approved', done: 'Marked done', proceed: 'Sent', continue: 'Continued' }[action];
+    const run = { submit: doSubmit, approve: doApprove, done: doMarkDone, proceed: doProceed, continue: doContinue }[action];
+    try {
+      const res = await run(id);
+      notice(res.ok ? '' : label + ' ' + id + '. ' + res.reason);
+    } catch (err) { notice(id + ' not changed: ' + ((err && (err.message || err.code)) || 'error') + '.', true); }
+  }
+  function wireDrop(box, colLabel) {
+    box.addEventListener('dragover', (e) => { if (dragId && dropAction(dragId, colLabel)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; box.classList.add('drop-over'); } });
+    box.addEventListener('dragleave', (e) => { if (!box.contains(e.relatedTarget)) box.classList.remove('drop-over'); });
+    box.addEventListener('drop', async (e) => {
+      box.classList.remove('drop-over');
+      const id = dragId; const action = id && dropAction(id, colLabel);
+      if (!action) return;
+      e.preventDefault();
+      if (action === 'done') {
+        const t = state.tickets.get(id) || {};
+        if (!(await askConfirm('Mark ' + id + ' done?', (t.title || '') + '. ' + doneText(id), 'Mark done'))) return;
+      }
+      runDrop(id, action);
+    });
+  }
+
   function card(id) {
     const t = state.tickets.get(id); const s = state.st.get(id) || {}; const status = statusOf(id);
     const prs = Object.keys(s.prs || {}).length;
-    return h('button', { type: 'button', class: 'card', onclick: () => openDetail(id) },
-      h('div', { class: 'top' }, h('span', { class: 'tid' }, id), h('span', { class: 'pill ' + (TONE[status] || '') }, status)),
+    const draggable = canDrag(id);
+    // A div, not a button: Firefox never starts a drag from a <button>. Keyboard: Enter or Space opens it.
+    return h('div', { role: 'button', tabindex: '0', class: 'card', onclick: () => openDetail(id), draggable: draggable ? 'true' : null,
+      onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(id); } },
+      ondragstart: draggable ? (e) => {
+        dragId = id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); e.currentTarget.classList.add('dragging');
+        document.querySelectorAll('#cols .col').forEach((c) => c.classList.add(dropAction(id, c.getAttribute('aria-label')) ? 'drop-ok' : 'drop-no'));
+      } : null,
+      ondragend: draggable ? (e) => {
+        dragId = null; e.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('#cols .col').forEach((c) => c.classList.remove('drop-ok', 'drop-over', 'drop-no'));
+      } : null },
+      h('div', { class: 'top' }, h('span', { class: 'tid' }, id), statusPill(status, id)),
       h('div', { class: 'title' }, t.title || 'Untitled'),
       h('div', { class: 'meta' },
         h('span', null, cap(t.type || 'feature')), h('span', null, '·'), h('span', { class: 'prio ' + (t.priority || 'medium') }, cap(t.priority || 'medium')),
@@ -1118,7 +1383,9 @@
         s.questions && s.questions.length && status === 'Needs info' ? h('span', { class: 'pill warn' }, s.questions.length + (s.questions.length > 1 ? ' questions' : ' question')) : null,
         prs ? h('span', { class: 'pill good' }, prs + ' PR' + (prs > 1 ? 's' : '')) : null,
         ...cardPrPills(s).map(([tone, label]) => h('span', { class: 'pill ' + tone }, label)),
+        t.auto_approve && ['Draft', 'Submitted', 'Investigating', 'Needs info', 'Plan ready', WAIT].includes(status) ? h('span', { class: 'pill accent' }, 'Auto-approve') : null,
         t.claude_review ? h('span', { class: 'pill' + (status === 'Reviewing' ? ' accent' : '') }, status === 'Reviewing' ? 'Claude reviewing' : (s.review_state === 'done' ? 'Claude reviewed' : 'Claude review')) : null,
+        commentPill(id),
         agentShotCount(s) ? h('span', { class: 'pill' }, agentShotCount(s) + (agentShotCount(s) > 1 ? ' screenshots' : ' screenshot')) : null,
         ...cardLinkPills(id)));
   }
@@ -1156,6 +1423,8 @@
     pendingAttachments = [...(t.attachments || [])];
     $('f-shots').checked = !!t.screenshots;
     $('f-review').checked = !!t.claude_review;
+    $('f-auto').checked = !!t.auto_approve;
+    $('f-auto-row').hidden = !canAutoApprove();
     $('f-files').value = ''; $('form-msg').textContent = '';
     renderThumbs();
     $('f-files').disabled = !state.assets;
@@ -1193,7 +1462,7 @@
   // One line describing what an edit changed, for the change log.
   function diffText(a, b) {
     const out = [];
-    for (const [k, label] of [['title', 'title'], ['description', 'description'], ['type', 'type'], ['priority', 'priority'], ['screenshots', 'screenshots'], ['claude_review', 'Claude review']]) {
+    for (const [k, label] of [['title', 'title'], ['description', 'description'], ['type', 'type'], ['priority', 'priority'], ['screenshots', 'screenshots'], ['claude_review', 'Claude review'], ['auto_approve', 'auto-approve']]) {
       if (JSON.stringify(a[k]) !== JSON.stringify(b[k])) out.push(k === 'description' ? 'description' : label + ': ' + (a[k] ?? '—') + ' → ' + (b[k] ?? '—'));
     }
     if ((a.attachments || []).length !== (b.attachments || []).length) out.push('attachments: ' + (a.attachments || []).length + ' → ' + (b.attachments || []).length);
@@ -1230,13 +1499,18 @@
     try {
       const id = editing || await nextId();
       const prev = state.tickets.get(id) || {};
+      // Only approvers and admins can change auto-approve; for anyone else it stays as it was.
+      const auto = canAutoApprove() ? $('f-auto').checked : !!prev.auto_approve;
+      const autoChanged = canAutoApprove() && auto !== !!prev.auto_approve;
       const doc = {
         ...prev, // keep fields this form does not edit (e.g. source)
         id, title, description, screenshots: $('f-shots').checked, claude_review: $('f-review').checked, type: $('f-type').value, priority: $('f-priority').value,
-        author_id: prev.author_id || state.me.id, attachments: pendingAttachments,
+        author_id: prev.author_id || state.me.id, attachments: pendingAttachments, auto_approve: auto,
+        auto_approved_by: auto ? (autoChanged ? state.me.id : (prev.auto_approved_by || state.me.id)) : null,
         created_at: prev.created_at || nowIso(), submitted_at: submit ? nowIso() : (prev.submitted_at || ''),
       };
       await state.db.doc('tickets/' + id).set({ ...doc, ...stamp() });
+      if (autoChanged || (auto && !editing)) await writeAutoVote(id, auto);
       logChange(id, editing ? (submit ? 'edited and submitted' : 'edited') : (submit ? 'created and submitted' : 'created as draft'),
         editing ? diffText(prev, doc) : title);
       if (submit) {
@@ -1293,6 +1567,7 @@
   }
   function openDetail(id) {
     openId = id; replies = [];
+    markSeen(id);
     watchTicketLog(id);
     const st0 = statusOf(id);
     detailTab = st0 === 'Plan ready' || st0 === 'Approved' ? 'plan' : (['PR open', 'Reviewing', 'Done', 'Coding', 'Queued'].includes(st0) ? 'code' : 'request');
@@ -1313,7 +1588,7 @@
     if (!$('dlg-detail').open) $('dlg-detail').showModal();
   }
   $('dlg-detail').addEventListener('close', () => {
-    openId = null;
+    openId = null; render(); // drops "Claude replied" from the card just read
     unsubLogs.forEach((u) => u()); unsubLogs = []; ticketLog = [];
     if (unsubReplies) { unsubReplies(); unsubReplies = null; }
     if (unsubComments) { unsubComments(); unsubComments = null; }
@@ -1325,7 +1600,7 @@
     const s = state.st.get(id) || {}; const status = statusOf(id);
     const isAuthor = state.me && t.author_id === state.me.id;
     $('d-id').textContent = id; $('d-title').textContent = t.title || 'Untitled';
-    $('d-meta').replaceChildren(h('span', { class: 'pill ' + (TONE[status] || '') }, status),
+    $('d-meta').replaceChildren(statusPill(status, id),
       h('span', null, cap(t.type || 'feature') + ' · ' + cap(t.priority || 'medium') + ' · ' + nameOf(t.author_id)),
       ...(s.size ? [h('span', { class: 'pill' }, 'Size ' + s.size)] : []));
     const keepAnswer = $('d-answer') ? $('d-answer').value : ''; const keepChanges = $('d-changes') ? $('d-changes').value : '';
@@ -1360,6 +1635,31 @@
       });
       tabs.request.push(h('label', { class: 'toggle' }, cb, ' ' + label));
     }
+    // Auto-approve: approvers and admins can turn it on or off until the plan is approved.
+    {
+      const open = ['Draft', 'Submitted', 'Investigating', 'Needs info', 'Plan ready', WAIT].includes(status);
+      const by = autoApprover(id);
+      if (canAutoApprove() && state.canWrite && !isArchived(id) && open) {
+        const cb = h('input', { type: 'checkbox', id: 'd-auto' }); cb.checked = !!t.auto_approve;
+        cb.addEventListener('change', async () => {
+          cb.disabled = true;
+          try {
+            await state.db.doc('tickets/' + id).update({ auto_approve: cb.checked, auto_approved_by: cb.checked ? state.me.id : null, ...stamp() });
+            await writeAutoVote(id, cb.checked);
+            logChange(id, 'Auto-approve: ' + (cb.checked ? 'on' : 'off'));
+            // A plan already waiting is approved now: tell Claude so coding starts without waiting for the next check.
+            if (cb.checked && status === 'Plan ready') {
+              const res = await sendToClaude('Approve ' + id + ' (plan revision ' + (s.plan_rev || 0) + ')', $('d-body'));
+              msg.textContent = res.ok ? 'Auto-approve on: coding starts shortly.' : res.reason;
+            }
+          } catch (err) { cb.checked = !cb.checked; msg.textContent = 'Not changed: ' + ((err && err.code) || 'error') + '.'; }
+          cb.disabled = false;
+        });
+        tabs.request.push(h('label', { class: 'toggle' }, cb, ' Auto-approve the plan (coding starts as soon as the plan is ready)', by && by !== state.me.id ? h('span', { class: 'hint', style: 'color:var(--muted)' }, ' · set by ' + nameOf(by)) : null));
+      } else if (t.auto_approve) {
+        tabs.request.push(h('div', { class: 'empty-col' }, by ? 'Auto-approve on (set by ' + nameOf(by) + '): coding starts as soon as the plan is ready.' : 'Auto-approve is ticked but no approver or admin confirmed it, so the plan still needs an approval.'));
+      }
+    }
     if (t.source === 'chat') tabs.request.push(h('div', { class: 'empty-col' }, 'Created from a Claude conversation.'));
     tabs.request.push(linksSection(id, t, s, (isAuthor || isAdmin()) && state.canWrite && !isArchived(id), msg));
     if (t.attachments && t.attachments.length) {
@@ -1374,6 +1674,19 @@
     if (s.plan) tabs.plan.push(h('section', { class: 'block' }, h('h4', null, 'Plan' + (s.plan_rev ? ' · revision ' + s.plan_rev : '')), md(s.plan)));
     if (!tabs.plan.length) tabs.plan.push(h('div', { class: 'empty-col' }, status === 'Draft' ? 'Submit the ticket and Claude writes a plan.' : 'Claude has not written a plan yet.'));
     // Code tab: what the coding session produced (PRs, branch, its screenshots).
+    // Latest change made after a comment: Claude's newest reply to an "Ask Claude" comment.
+    {
+      const lastReply = comments.filter((c) => c.from_claude && c.reply_to).sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
+      const asked = lastReply && comments.find((c) => c._id === lastReply.reply_to);
+      // With PRs it belongs to the Code tab; before coding (planning phases) to the Plan tab.
+      if (lastReply && asked) {
+        const hasPrs = !!(s.prs && Object.keys(s.prs).length);
+        (hasPrs ? tabs.code : tabs.plan).unshift(h('div', { class: 'callout accent' },
+          h('strong', null, 'Last update · ' + fmt(lastReply.at) + ', after ' + nameOf(asked.author_id) + '\'s comment'),
+          h('div', { class: 'empty-col', style: 'padding:0;color:var(--fg)' }, String(lastReply.text || '').split('\n')[0].slice(0, 220)),
+          h('a', { href: '#', onclick: (e) => { e.preventDefault(); detailTab = 'comments'; renderDetail(); } }, 'See the comments')));
+      }
+    }
     if (s.prs && Object.keys(s.prs).length) {
       tabs.code.push(h('section', { class: 'block' }, h('h4', null, 'Pull requests'),
         h('dl', { class: 'kv' }, Object.entries(s.prs).flatMap(([side, url]) => [
@@ -1431,7 +1744,16 @@
       cta.value = draft.text;
       const ask = h('input', { type: 'checkbox', id: 'd-comment-ask' }); ask.checked = draft.ask;
       cta.addEventListener('input', () => { commentDrafts[id] = { text: cta.value, ask: ask.checked }; });
-      ask.addEventListener('change', () => { commentDrafts[id] = { text: cta.value, ask: ask.checked }; });
+      // Where an "Ask Claude" comment goes, the same routing as the orchestrator's (orchestrator.md, Comment routing).
+      const target = ['Draft', 'Done'].includes(status) ? null
+        : (['Submitted', 'Investigating', 'Needs info', 'Plan ready'].includes(status) || (PAUSED.includes(status) && !s.code_session_id) || (status === WAIT && s.waiting_stage === 'planning')) ? 'planning' : 'coding';
+      const postLabel = () => (ask.checked && target ? (target === 'planning' ? 'Post and send to planning' : 'Post and send to coding') : 'Post comment');
+      const postHint = () => (!ask.checked || !target ? '' : target === 'planning' ? 'Claude revises the plan if needed; it goes back to "With Claude".' : 'Claude changes the code on the same branch and PR; it goes back to "Coding".');
+      ask.addEventListener('change', () => {
+        commentDrafts[id] = { text: cta.value, ask: ask.checked };
+        const b = $('d-comment-post'); if (b) b.textContent = postLabel();
+        const hint = $('d-comment-hint'); if (hint) hint.textContent = postHint();
+      });
       // The new comment's snapshot re-renders this composer mid-post, so status, busy state and the
       // text box are looked up live by id (and kept per ticket), never through the captured elements.
       const cmsg = h('span', { class: 'msg', role: 'status', id: 'd-comment-msg' }, commentStatus[id] || '');
@@ -1439,8 +1761,10 @@
       const setBusy = (on) => { if (on) commentPosting.add(id); else commentPosting.delete(id); const b = openId === id && $('d-comment-post'); if (b) b.disabled = on; };
       tabs.comments.push(h('section', { class: 'block composer' }, cta,
         h('div', { class: 'row-between' },
-          h('label', { class: 'toggle' }, ask, ' Ask Claude to act on it' + (['PR open', 'Coding'].includes(status) ? ' (changes the PR)' : '')),
-          h('div', { class: 'actions' }, cmsg, h('button', { type: 'button', class: 'primary', id: 'd-comment-post', disabled: commentPosting.has(id), onclick: async () => {
+          h('div', { style: 'display:grid;gap:2px;min-width:0;flex:1 1 240px' },
+            h('label', { class: 'toggle' }, ask, ' Ask Claude to act on it'),
+            h('span', { id: 'd-comment-hint', style: 'color:var(--muted);font-size:12px' }, postHint())),
+          h('div', { class: 'actions', style: 'margin-left:auto' }, cmsg, h('button', { type: 'button', class: 'primary', id: 'd-comment-post', disabled: commentPosting.has(id), onclick: async () => {
             const box = $('d-comment'); const text = (box ? box.value : '').trim();
             if (!text) { setCmsg('Write a comment first.'); return; }
             const askNow = $('d-comment-ask') ? $('d-comment-ask').checked : ask.checked;
@@ -1451,6 +1775,8 @@
               await state.db.collection('tickets/' + id + '/comments').add({ author_id: state.me.id, text, at: nowIso(), to_claude: askNow });
               logChange(id, askNow ? 'commented (sent to Claude)' : 'commented', text.slice(0, 140));
               if (askNow) {
+                await markPending(id);
+                try { await state.db.doc('tickets/' + id).update({ claude_comment_at: nowIso() }); } catch (_) { /* card hint only */ }
                 const res = await sendToClaude('Comment ' + id + ': ' + text.slice(0, 300), $('d-body'));
                 setCmsg(res.ok ? 'Posted and sent to Claude.' : 'Posted. ' + res.reason);
               } else setCmsg('Posted.');
@@ -1461,7 +1787,7 @@
               setCmsg('Not posted: ' + ((err && err.code) || 'error') + '.');
             }
             setBusy(false);
-          } }, 'Post comment')))));
+          } }, postLabel())))));
     }
     const TABS = [['request', 'Request'], ['plan', 'Plan'], ['code', 'Code'], ['comments', 'Comments'], ['details', 'Details & history']];
     if (!tabs[detailTab]) detailTab = 'request';
@@ -1482,10 +1808,9 @@
       if (canSubmit()) foot.append(h('button', { type: 'button', class: 'primary', onclick: async (e) => {
         e.target.disabled = true; msg.textContent = 'Submitting…';
         try {
-          await state.db.doc('tickets/' + id).update({ submitted_at: nowIso(), ...stamp() });
-          logChange(id, 'submitted');
-          const res = await sendToClaude('Submit ' + id + ': ' + (t.title || ''), $('d-body'));
-          msg.textContent = res.ok ? 'Submitted. Claude starts planning.' : 'Submitted. ' + res.reason;
+          const res = await doSubmit(id);
+          if (!res.ok) notice('Submitted. ' + res.reason);
+          $('dlg-detail').close();
         } catch (err) { msg.textContent = 'Not submitted: ' + ((err && err.code) || 'error') + '.'; e.target.disabled = false; }
       } }, 'Submit to Claude'));
     }
@@ -1498,8 +1823,10 @@
         try {
           await state.db.collection('tickets/' + id + '/replies').add({ author_id: state.me.id, text, at: nowIso() });
           logChange(id, 'answered Claude', text.slice(0, 140));
+          await markPending(id);
           const res = await sendToClaude('Resubmit ' + id + ': answers added', $('d-body'));
-          msg.textContent = res.ok ? 'Sent. Claude picks it up now.' : res.reason; ta.value = '';
+          if (!res.ok) notice('Answers saved. ' + res.reason);
+          ta.value = ''; $('dlg-detail').close();
         } catch (err) { msg.textContent = 'Not sent: ' + ((err && err.code) || 'error') + '.'; }
         e.target.disabled = false;
       } }, 'Send answers to Claude'));
@@ -1510,6 +1837,7 @@
       foot.append(h('button', { type: 'button', onclick: async (e) => {
         const text = ta.value.trim(); if (!text) { msg.textContent = 'Write the changes first.'; return; }
         e.target.disabled = true; msg.textContent = 'Sending…';
+        await markPending(id);
         const res = await sendToClaude('Changes for ' + id + ' (plan revision ' + s.plan_rev + '): ' + text, $('d-body'));
         logChange(id, 'requested plan changes (revision ' + s.plan_rev + ')', text.slice(0, 140));
         msg.textContent = res.ok ? 'Sent. Claude revises the plan.' : res.reason; if (res.ok) ta.value = '';
@@ -1518,24 +1846,36 @@
       foot.append(h('button', { type: 'button', class: 'primary', onclick: async (e) => {
         e.target.disabled = true; msg.textContent = 'Approving…';
         try {
-          const vote = { [id]: { plan_rev: s.plan_rev || 0, at: nowIso() } };
-          const vref = state.db.doc('approval_votes/' + state.me.id);
-          const vsnap = await vref.get();
-          if (vsnap.exists) await vref.update(vote); else await vref.set(vote);
-          if (state.owner) await state.db.doc('approvals/' + id).set({ approved_by: state.me.id, at: nowIso(), plan_rev: s.plan_rev || 0 });
-          logChange(id, 'approved plan revision ' + (s.plan_rev || 0));
-          const res = await sendToClaude('Approve ' + id + ' (plan revision ' + (s.plan_rev || 0) + ')', $('d-body'));
-          msg.textContent = res.ok ? 'Approved. Coding starts shortly.' : res.reason;
+          const res = await doApprove(id);
+          if (!res.ok) notice('Approved. ' + res.reason);
+          $('dlg-detail').close();
         } catch (err) { msg.textContent = 'Not approved: ' + ((err && err.code) || 'error') + '.'; e.target.disabled = false; }
       } }, 'Approve plan'));
     }
     if (canApprove() && PAUSED.includes(status)) {
       foot.append(h('button', { type: 'button', class: 'primary', onclick: async (e) => {
         e.target.disabled = true; msg.textContent = 'Sending…';
+        await markPending(id);
         const res = await sendToClaude('Continue ' + id, $('d-body'));
         logChange(id, 'clicked Continue');
-        msg.textContent = res.ok ? 'Sent. Claude resumes this ticket.' : res.reason; e.target.disabled = false;
+        if (!res.ok) notice('Continue saved. ' + res.reason);
+        e.target.disabled = false; $('dlg-detail').close();
       } }, 'Continue'));
+    }
+    // Mark done: the same as dropping the card on Done (owner, approvers and admins).
+    if (status !== 'Done' && canMarkDone() && state.canWrite && !isArchived(id)) {
+      left.append(h('button', { type: 'button', onclick: (e) => {
+        if (foot.querySelector('.confirm')) return;
+        const box = h('div', { class: 'confirm', role: 'alert' },
+          h('span', null, 'Mark ' + id + ' as done? ' + doneText(id)),
+          h('button', { type: 'button', class: 'primary', onclick: async (ev) => {
+            ev.target.disabled = true;
+            try { const res = await doMarkDone(id); if (!res.ok) notice('Marked done. ' + res.reason); $('dlg-detail').close(); }
+            catch (err) { msg.textContent = 'Not changed: ' + ((err && err.code) || 'error') + '.'; ev.target.disabled = false; }
+          } }, 'Mark done'),
+          h('button', { type: 'button', onclick: () => box.remove() }, 'Keep'));
+        foot.prepend(box);
+      } }, 'Mark done'));
     }
     // Tabs go first so they are always the first thing seen; action boxes sit between them and the panel.
     body.prepend(bar);
@@ -1547,9 +1887,9 @@
     // Archiving or deleting closes the ticket's unmerged PRs (the orchestrator does it); branches are deleted by hand on GitHub.
     const sides = Object.keys(s.prs || {}); const merged = s.merged || [];
     const unmerged = sides.filter((x) => !merged.includes(x));
-    const gitNote = unmerged.length
-      ? 'Claude closes its ' + (unmerged.length > 1 ? unmerged.length + ' unmerged PRs' : 'unmerged PR') + '. Delete the branch on GitHub afterwards if you don\'t need it.'
-      : '';
+    const gitNote = [busy ? 'Claude stops working on it (its sessions are stopped and archived).' : '',
+      unmerged.length ? 'Claude closes its ' + (unmerged.length > 1 ? unmerged.length + ' unmerged PRs' : 'unmerged PR') + '. Delete the branch on GitHub afterwards if you don\'t need it.' : '']
+      .filter(Boolean).join(' ');
     if ((state.owner || isAuthor) && state.canWrite) {
       const doArchive = async (e) => {
         e.target.disabled = true;
@@ -1564,7 +1904,6 @@
         e.target.disabled = false;
       };
       left.append(h('button', { type: 'button', onclick: (e) => {
-        if (busy) { msg.textContent = 'Claude is working on this ticket. Archive it once it is paused or done.'; return; }
         if (archived || !gitNote) { doArchive(e); return; }
         if (foot.querySelector('.confirm')) return;
         const box = h('div', { class: 'confirm', role: 'alert' },
@@ -1576,7 +1915,6 @@
     }
     if (state.owner) {
       left.append(h('button', { type: 'button', class: 'danger', onclick: () => {
-        if (busy) { msg.textContent = 'Claude is working on this ticket. Delete it once it is paused or done.'; return; }
         if (foot.querySelector('.confirm')) return;
         const box = h('div', { class: 'confirm', role: 'alert' },
           h('span', null, 'Delete ' + id + ' for good? Its plan, answers, history and screenshots are removed. ' + (gitNote || 'Claude closes any unmerged PR.') + ' Merged PRs and branches stay.'),
@@ -1659,7 +1997,7 @@
     return h('button', { type: 'button', class: 'health-chip', onclick: openHealth, 'aria-label': 'Pipeline health: ' + st.label },
       h('span', { class: 'dot ' + st.tone, 'aria-hidden': 'true' }), 'Pipeline: ' + st.label);
   }
-  function openHealth() { renderHealth(); $('h-msg').textContent = ''; $('h-run').hidden = !(state.canWrite && state.comments); $('dlg-health').showModal(); }
+  function openHealth() { renderHealth(); if (!healthRun) $('h-msg').textContent = ''; $('h-run').hidden = !(state.canWrite && state.comments); $('dlg-health').showModal(); }
   function renderHealth() {
     const st = healthState(); const hh = st.hh || {};
     const stageLabel = { planning: 'Planning', coding: 'Coding', review: 'Review' };
@@ -1667,7 +2005,7 @@
       h('div', { class: 'callout ' + (st.tone === 'good' ? 'accent' : (st.tone || 'warn')) },
         h('strong', null, st.tone === 'good' ? 'Everything looks fine.' : 'Pipeline: ' + st.label),
         st.why.length ? h('ul', { class: 'problems' }, st.why.map((x) => h('li', null, x))) : null),
-      (hh.notes || []).length ? h('section', { class: 'block' }, h('h4', null, 'Notes'), h('ul', { class: 'problems' }, hh.notes.map((x) => h('li', null, x)))) : null,
+      ...((hh.notes || []).length ? [h('section', { class: 'block' }, h('h4', null, 'Notes'), h('ul', { class: 'problems' }, hh.notes.map((x) => h('li', null, x))))] : []),
       h('section', { class: 'block' }, h('h4', null, 'Orchestrator'), h('dl', { class: 'kv' },
         h('dt', null, 'Last report'), h('dd', null, hh.at ? fmt(hh.at) + ' (' + ago(hh.at) + ')' : '—'),
         h('dt', null, 'Watching the board'), h('dd', null, hh.watching === undefined ? '—' : (hh.watching ? 'Yes' : 'No')),
@@ -1681,12 +2019,36 @@
           ? h('dl', { class: 'kv' }, (hh.sessions || []).flatMap((x) => [h('dt', null, x.ticket + ' · ' + (stageLabel[x.stage] || x.stage)), h('dd', null, x.status || '—')]))
           : h('div', { class: 'empty-col' }, 'None right now.')));
   }
+  // "Run a check now": the button reads "Running" with pulsing dots until the orchestrator writes a new health
+  // report (config/runtime.health.at changes), or 3 minutes pass.
+  let healthRun = null; // { before: health.at when asked, timer }
+  const healthAt = () => ((state.runtime && state.runtime.health) || {}).at || '';
+  function setHealthRunning(on) {
+    const b = $('h-run');
+    b.style.opacity = on ? '1' : ''; // disabled while running, but not faded: it is working, not unavailable
+    if (on) { b.disabled = true; b.replaceChildren('Running', h('span', { class: 'dots', role: 'img', 'aria-label': 'Claude is running the check' }, h('i'), h('i'), h('i'))); }
+    else { b.disabled = false; b.replaceChildren('Run a check now'); }
+  }
+  function endHealthRun(msg) {
+    if (!healthRun) return;
+    clearTimeout(healthRun.timer); healthRun = null; setHealthRunning(false);
+    if (msg) $('h-msg').textContent = msg;
+  }
   $('h-run').addEventListener('click', async () => {
-    $('h-run').disabled = true; $('h-msg').textContent = 'Asking Claude…';
+    setHealthRunning(true); $('h-msg').textContent = '';
+    healthRun = { before: healthAt(), timer: setTimeout(() => endHealthRun('No new report after 3 minutes. The orchestrator may be busy or stopped.'), 180000) };
     const res = await sendToClaude('Health check', $('h-body'));
-    $('h-msg').textContent = res.ok ? 'Asked. Claude runs a full check and updates this in a minute.' : res.reason;
-    setTimeout(() => { $('h-run').disabled = false; }, 60000);
+    if (!res.ok) endHealthRun(res.reason);
   });
+  // These windows close on a click outside them (on the dimmed backdrop).
+  for (const dId of ['dlg-health', 'dlg-reports', 'dlg-backups', 'dlg-perms', 'dlg-settings']) {
+    const d = $(dId);
+    d.addEventListener('click', (e) => {
+      if (e.target !== d) return;
+      const r = d.getBoundingClientRect();
+      if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom || !e.clientX) d.close();
+    });
+  }
 
   // ---------- theme (per viewer, kept in this browser) ----------
   const hostTheme = document.documentElement.getAttribute('data-theme');
@@ -2041,7 +2403,7 @@
     listen('tickets', (docs) => {
       state.tickets = new Map(docs.map((d) => [d.id, d.data()]));
       state.loaded = true; clearTimeout(timer); fillAuthorFilter();
-      resolveNames(docs.map((d) => d.data().author_id)); render(); if (openId) renderDetail();
+      resolveNames(docs.map((d) => d.data().author_id)); syncCommentWatches(); render(); if (openId) renderDetail();
     });
     listen('ticket_state', (docs) => { state.st = new Map(docs.map((d) => [d.id, d.data()])); if (!(state.company && state.company.repos)) fillRepoFilter(); render(); if (openId) renderDetail(); });
     listen('approvals', (docs) => { state.approvals = new Map(docs.map((d) => [d.id, d.data()])); render(); if (openId) renderDetail(); });
@@ -2049,9 +2411,13 @@
     listen('events', (docs) => { state.events = docs.map((d) => ({ ...d.data(), _id: d.id })); if (openId) renderDetail(); });
     state.db.doc('config/models').onSnapshot((snap) => { state.config = snap.exists ? snap.data() : null; }, () => {});
     // The orchestrator writes the last usage reading to config/runtime.usage; the bar updates live when it does.
-    state.db.doc('config/runtime').onSnapshot((snap) => { state.runtime = snap.exists ? snap.data() : null; renderUsage(); if ($('dlg-health').open) renderHealth(); }, () => {});
+    state.db.doc('config/runtime').onSnapshot((snap) => {
+      state.runtime = snap.exists ? snap.data() : null; renderUsage();
+      if (healthRun && healthAt() !== healthRun.before) endHealthRun('Check done: updated ' + fmt(healthAt()) + '.');
+      if ($('dlg-health').open) renderHealth();
+    }, () => {});
     renderUsage();
-    setInterval(renderUsage, 60000); // keeps "checked … ago" and reset times current
+    setInterval(() => { renderUsage(); render(); }, 60000); // keeps "checked … ago", reset times and stale "working" marks current
     render();
   }
   render();
