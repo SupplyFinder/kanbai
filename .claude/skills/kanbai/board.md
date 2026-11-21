@@ -60,7 +60,8 @@ with `needs_details_at` (the board then shows "Claude needs details"), and answe
 | `scope` | string[] | repo keys (from `repos.md`) the plan changes |
 | `size` | `S` \| `M` \| `L` | |
 | `branch` | string | from the repo's `Branches` pattern, e.g. `feature/T-n-slug` |
-| `plan_session_id` / `code_session_id` | string | Claude Code session ids |
+| `plan_session_id` / `code_session_id` | string | Claude Code session ids (`code_session_id` = the latest coding session) |
+| `code_sessions` / `coding_key` | `{<key>: session id}` / string | one coding session per repo key, each started on its own repo; `coding_key` = the repo being coded now |
 | `deadline_at` | ISO string | end of the running session's time cap |
 | `deadline_trigger_id` | string | scheduled check to cancel when the session ends early |
 | `prs` | `{<key>: <PR URL>}` | one PR per repo key in scope |

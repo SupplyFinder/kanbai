@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Coding sessions start on the product repo (0.2.0). Attaching a repo with push access from a session
+  started on the company repo is decided by a permission check that refused it again and again. The
+  orchestrator now starts one coding session per repo in scope, on that repo (`source_url`, `outcome_branch`
+  = the ticket branch), one after the other in coding order; nothing is attached with push access. The
+  session loads `/kanbai` and the company files from the skill installed on the account, so setup step 10a
+  is required and its copy carries all four company files (`config.yml`, `repos.md`, `notes.md`,
+  `screenshots.md`); redo it whenever a company file or the skill changes. `ticket_state` gains
+  `code_sessions` and `coding_key`. A comment for another repo is forwarded to that repo's session.
 - Auto-approve: the owner, approvers and admins can tick "Auto-approve the plan" on a ticket (form or Request
   tab). It is their own `approval_votes` entry (`auto: true`); every plan revision is then approved and coding
   starts without a click. The orchestrator checks the role again.
