@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+- Auto-approve: the owner, approvers and admins can tick "Auto-approve the plan" on a ticket (form or Request
+  tab). It is their own `approval_votes` entry (`auto: true`); every plan revision is then approved and coding
+  starts without a click. The orchestrator checks the role again.
+- Drag and drop on the board, by role: Draft → With Claude (submit), Plan ready → Coding (approve),
+  Needs info → With Claude (go ahead without more answers), Paused → its stage (Continue), any column → Done.
+  Columns a card cannot go to turn grey while dragging. Mark done is also a button.
+- Mark done: the orchestrator stops the ticket's sessions, closes its unmerged PRs (merged ones are kept) and
+  sets Done. The request is the person's own `approval_votes` entry (`done: true`).
+- Claude at work is visible: pulsing dots on the status pill while a session runs ("Approved, coding starts"
+  too); a comment sent to Claude, answers, plan changes or Continue move the card to its working column at
+  once (`claude_pending_at`, ended when the status changes, not by clock).
+- Comments: the post button says where the comment goes ("Post and send to planning / coding"); cards show
+  "Comment sent", "Claude needs details" or "Claude replied"; the Plan or Code tab shows the last update made
+  after a comment.
+- Submit, Approve, Continue and Send answers close the ticket; archive and delete work at any status (the
+  orchestrator stops the sessions first).
+- A submitted ticket Claude was never told about shows a "Send to Claude now" banner.
+- Health: "Run a check now" shows Running with dots until the new report arrives. Health, Reports, Backups,
+  Permissions and Settings close on a click outside. Fix: a stray "null" in Health.
+- Fix: dropping a card on Done did nothing (the browser confirm is blocked in the claude.ai frame); the board
+  uses its own confirmation.
+- Fix: coding sessions refused to attach repos. The orchestrator passes `add_repo` and `register_repo_root` to
+  the sessions it starts (`create_session` `extra_allowed_tools`), and a refused attach no longer tells people
+  to edit `settings.json` (it already allows `add_repo`).
+- Sessions write real timestamps (`date -u`), never rounded or estimated ones.
+- `/kanbai add-repo` sets up screenshots for a new UI repo (its own harness, or the API stubbed in
+  Playwright with a fake login, tried once before it is written down).
 - Setup asks far fewer questions: only which repos to use and who gets the chat skill (plus branches
   when they cannot be detected). No review to confirm and no Slack channel question: company name,
   ticket prefix (`KB` by default), time zone, Slack (off), screenshots, backups and logo take defaults

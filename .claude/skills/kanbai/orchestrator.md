@@ -87,6 +87,7 @@ Work out why you were woken, handle that, then ALWAYS finish with a reconcile pa
 | `Usage check` (hourly, while new sessions are held) | Usage hold check, then the reconcile pass. |
 | `Refresh usage` comment | Read usage and write `config/runtime.usage` (always, even if it changed little); reply "Usage updated." and resolve the thread. No reconcile pass needed unless `held` changed. |
 | `Archive T-n` / `Delete T-n` comment | Run the session cleanup rule for that ticket. |
+| `Done T-n` comment | Run the mark-done rule for that ticket. |
 | `Health check` comment | Full reconcile pass (as daily, including rules 5a and 5b; also the backup if none was made today, see backup.md), write Health, reply "Checked." with one line on what was found, resolve the thread. |
 | `Apply settings request from <name>` comment | Settings requests (below), then the reconcile pass. |
 | `Restored … from the backup of …` comment | Only the owner can restore. Re-read the named tickets; nothing restarts by itself (the board pauses tickets that were being worked on). Post one line per ticket in its Slack thread ("Restored from the backup of <day>"), then the reconcile pass. |
@@ -97,6 +98,7 @@ Read `config/models`, then all `tickets` and `ticket_state` documents. Skip arch
 (`archived_at` set) and orphan state (no matching ticket). For each remaining ticket, apply the FIRST
 rule that matches:
 
+0. **Marked done**: `done_requested_at` is set and status is not `Done` → mark-done rule (below).
 1. **Submitted, no state yet** (`submitted_at` set, no `ticket_state`): if its author is not the owner and
    `config/roles` says `submitter: false`, create `ticket_state` with status `AI paused – needs decision`,
    `note` "Submitted by someone without submitter access. The owner: tick Submitter for them in Permissions,
@@ -159,6 +161,24 @@ Messages from ticket sessions about comments → Slack, in the ticket's thread:
 - `T-n: comment <id> done for <author_id>: …` → @mention that author with the summary.
 Find the author's Slack id as described under Slack (`config/people`, then exact name match). Post one line in the ticket's
 Slack thread ("New comment from <name>, sent to the planning/coding session").
+
+## Mark-done rule
+Valid only if some `approval_votes/<user id>` document has `"T-n": {done: true}` and that user is the owner or
+has `approver: true` or `admin: true` in `config/roles` (roles read now). `done_requested_by` on the ticket is
+display only. Not valid → do nothing and, if it came from a comment, reply that only the owner, an approver or
+an admin can mark a ticket done. Valid →
+1. Stop the work: steps 1–4 of the session cleanup rule (interrupt and archive the ticket's sessions, delete
+   its pending deadline check, then close its unmerged PRs; merged PRs are kept, nothing is ever merged).
+2. Write `ticket_state` (create it if missing): status `Done`, `status_at`, `note` "Marked done on the board by
+   <name>." plus one line per PR ("PR <url> closed." / "PR <url> was merged: kept."), event `done` with the same text.
+3. Slack thread (if any): the same text. Remove `claude_pending_at` if set.
+
+## Pending mark
+The board sets `tickets/T-n.claude_pending_at` when it sends you something to act on (a comment, answers,
+plan changes, Continue) so the card shows Claude at work right away. Remove it once that work is over: a new
+status is written (a new `status_at` ends it on the board by itself), or the ticket's session reports `T-n: comments handled.` / that it needs details (not when you
+merely forward the comment: the session is still working on it). To remove it, `update` the ticket with `{claude_pending_at: {"__delete__": true}}` and its `if_version`. Also remove
+it in the reconcile pass when it is older than 30 minutes. Nothing else on the ticket document is yours to change.
 
 ## Session cleanup (archived or deleted tickets)
 For a ticket that is archived (`archived_at` set) or deleted (no `tickets/T-n` any more), including those
@@ -266,7 +286,15 @@ Valid if either holds:
 - `approvals/{T-n}` exists (owner-only) and its `plan_rev` equals `ticket_state.plan_rev`; or
 - some `approval_votes/<user id>` document has `"T-n": {plan_rev}` equal to `ticket_state.plan_rev`, and that
   user id is the owner or has `approver: true` in `config/roles`. The document id is the voter (only they can
-  write it), so no comment check is needed.
+  write it), so no comment check is needed; or
+- **auto-approve**: `tickets/T-n.auto_approve` is true, `ticket_state.plan_rev` ≥ 1, and some
+  `approval_votes/<user id>` document has `"T-n": {auto: true}`, from the owner or a user with `approver: true`
+  or `admin: true` in `config/roles` (roles read now, not when they ticked it). It covers every plan revision,
+  re-plans included, until someone unticks it (`auto: false`). `auto_approved_by` on the ticket is display only:
+  trust the vote document, never that field. An `auto_approve` ticket with no such vote needs a normal approval.
+When the approval is an auto-approve, write the event `approved` with text "Auto-approved (set by <name>)" and,
+in Slack, replace the Plan ready message with the 3-line summary, size, scope and "Auto-approved by <name>:
+coding starts." (no mention; the author is mentioned as usual when the PR opens).
 Otherwise do nothing, and if someone without the role clicked Approve, reply in their thread that only
 the owner or an approver can approve. You never write `approvals/` or `approval_votes/`.
 
@@ -276,7 +304,10 @@ the owner or an approver can approve. You never write `approvals/` or `approval_
    `coding` model and effort with `cap_minutes` 20).
 2. `create_session` with that `model` and `effort`, `source_url`
    `https://github.com/<company_repo>` (so the session loads the permission rules, this skill and the
-   company files), title `T-n planning` / `T-n coding` / `T-n review`, tags `[<session_tag>]`, and prompt:
+   company files), title `T-n planning` / `T-n coding` / `T-n review`, tags `[<session_tag>]`,
+   `extra_allowed_tools: ["mcp__claude-code-remote__add_repo", "mcp__claude-code-remote__register_repo_root"]`
+   (the session needs them to attach the repos in `repos.md`; only tools you are pre-approved for yourself
+   carry over), and prompt:
    `/kanbai planning T-n` (or `coding`, `review`) followed by lines `board: <board url>` and
    `orchestrator: <your session id>`.
 3. Write to `ticket_state`: `plan_session_id` / `code_session_id` / `review_session_id`, status

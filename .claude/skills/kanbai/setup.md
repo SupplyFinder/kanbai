@@ -172,7 +172,9 @@ branch, main-only repo) above the three sections, never inside them.
 
 ## /kanbai add-repo <owner/name>
 Steps 4–6 for that repo only (and the branch question for it), then: add its section to `repos.md` and its
-place in "Coding order"; new data sources to `notes.md`; its check commands and branch denies to
+place in "Coding order"; new data sources to `notes.md`; when screenshots are on and the repo is a UI, add it
+to `screenshots.md` (Which repos, plus its Real and Stubbed modes: reuse a fake backend or harness it has,
+else stub its API calls in Playwright with `page.route` and a fake login; try it once before writing it); its check commands and branch denies to
 `.claude/settings.json`; update `config/company.repos` on the board. Commit on a branch, push, give the PR
 link. No orchestrator restart is needed: sessions read the company files when they start.
 

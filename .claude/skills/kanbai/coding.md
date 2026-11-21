@@ -19,7 +19,9 @@ Read `ticket_state/T-n`, `approvals/T-n` and `approval_votes`. Continue only if 
 - Attach every repo in `scope` with push access (`add_repo` with `access: "push"`, clone, then
   `register_repo_root`, one at a time), plus, read-only, each repo its `repos.md` section lists under
   "Depends on" (unless already in scope). Never attach a repo that is not in `repos.md` or is in
-  `forbidden_repos`. If an attach fails, do not retry: status `AI paused – needs decision`, `note` = which
+  `forbidden_repos`. If an attach fails, do not retry (a refusal by the session's permission check included: the
+  rules in `.claude/settings.json` already allow `add_repo`, so never tell anyone to add it there; say that
+  Continue starts a new session that tries again): status `AI paused – needs decision`, `note` = which
   repo and the error, message the orchestrator, end.
 - In each repo in scope: if `origin/<branch>` exists, check it out and continue from its commits
   (`git log --oneline origin/<target>..HEAD`); otherwise create `<branch>` from a freshly fetched

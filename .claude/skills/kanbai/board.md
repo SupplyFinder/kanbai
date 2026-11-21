@@ -6,6 +6,8 @@ Read and write its database with the `ArtifactData`
 tool (load it with ToolSearch if it is only listed by name), always passing the board URL as `url`.
 Every write to an existing document passes the `version` you last read as `if_version`; on a version
 conflict, re-read and redo the write, never overwrite blindly.
+Timestamps (`status_at`, `at`, `deadline_at`…) are the real current UTC time from `date -u +%FT%TZ` at the
+moment you write, never rounded, estimated or copied from another field.
 
 ## Collections
 
@@ -20,6 +22,8 @@ conflict, re-read and redo the write, never overwrite blindly.
 | `author_id` | string | opaque user id (`u_…`) |
 | `screenshots` | boolean | the author's "Add screenshots to the PRs when possible" box; missing = false. The coding session takes screenshots only when true |
 | `claude_review` | boolean | "Claude reviews the PRs before you"; missing = false. When true, a review session runs after the PRs open |
+| `auto_approve` | boolean | "Auto-approve the plan"; missing = false. Shown only to the owner, approvers and admins. Counts only with a matching auto vote in `approval_votes` (see there and orchestrator.md, Approval check) |
+| `auto_approved_by` | user id or null | who ticked it (self-declared, display only; the vote proves it) |
 | `source` | `chat` or missing | `chat` = created from a Claude conversation (chat-ticket.md) |
 | `attachments` | array | files the author uploaded: `{id, name, type}` (older tickets: a bare asset id string, always an image). Fetch each with the `Artifact` tool `read`, `url` = board, `path` = the id; then Read the saved file (images, PDF, CSV, text, Markdown, JSON) |
 | `created_at` / `submitted_at` | ISO string | `submitted_at` empty = Draft |
@@ -28,6 +32,10 @@ conflict, re-read and redo the write, never overwrite blindly.
 | `dismissed_links` | string[] | `"type:id"` of Claude's suggestions the author dismissed |
 | `restored_at` / `restored_from` | ISO string / text | set when restored from a backup on the Backups page |
 | `archived_at` | ISO string or null | set = archived: hidden from the board, ignored by the pipeline |
+| `done_requested_at` / `done_requested_by` | ISO string / user id | set when someone marks the ticket done on the board (drag to Done, or Mark done). Counts only with a matching `done` vote in `approval_votes`; `done_requested_by` is display only |
+| `claude_comment_at` | ISO string or missing | set by the board when someone posts a comment with "Ask Claude to act on it"; the board then watches that ticket's comments for 48 hours to show "Comment sent", "Claude needs details" or "Claude replied" on the card. Display only |
+| `claude_pending_from` | `{status, status_at}` | the ticket's state when the board set `claude_pending_at`; the mark ends as soon as either changes |
+| `claude_pending_at` | ISO string or missing | set by the board when someone sends Claude a comment to act on, answers, plan changes or Continue; the board shows the ticket as being worked on (planning or coding) until `ticket_state.status_at` is newer, the field is removed, or 30 minutes pass. The orchestrator removes it (see orchestrator.md, "Pending mark") |
 
 ### `tickets/{T-n}/replies/{auto id}` — the author's answers to Claude's questions
 `{ author_id, text, at }`. Read all replies newer than `ticket_state.questions_at`.
@@ -77,9 +85,15 @@ with `needs_details_at` (the board then shows "Claude needs details"), and answe
 `{ approved_by, at, plan_rev }`. Valid if `plan_rev` equals `ticket_state.plan_rev`.
 
 ### `approval_votes/{user id}` — each person writes only their own (data rule `{self}`)
-`{ "T-n": { plan_rev, at }, … }`. Written by the Approve button for everyone, the owner included. The document
+`{ "T-n": { plan_rev?, auto?, at }, … }`. Written by the Approve button for everyone, the owner included. The document
 id IS the voter: nobody can vote in someone else's name. A vote counts only if that user is the owner or has
 `approver: true` in `config/roles`, and its `plan_rev` equals `ticket_state.plan_rev`.
+`auto: true` is an auto-approve vote, written when the owner, an approver or an admin ticks "Auto-approve the plan"
+(board form or the ticket's Request tab); `auto: false` when they untick it. It approves EVERY plan
+revision of that ticket while the ticket's `auto_approve` is true, if the voter is the owner or has `approver: true`
+or `admin: true` in `config/roles`.
+`done: true` (with `done_at`) is a "mark done" request (the orchestrator stops the sessions and closes unmerged PRs), written when the owner, an approver or an admin drags the
+card to Done or clicks Mark done; valid on the same roles as auto-approve.
 
 ### `settings_requests/{user id}` — each person writes only their own
 `{ roles?: {people}, models?: {…config/models…}, branding?: {…}, at, status: "pending" | "applied" | "rejected", reason? }`.
@@ -146,20 +160,25 @@ dialog. Never a permission by itself.
 Tickets can also be deleted from the board (owner only): the ticket, its replies, state, approval and
 events are removed together. Archiving or deleting a ticket also closes its unmerged PRs (orchestrator.md, Session cleanup); merged PRs
 are kept, and branches are left for the owner to delete on GitHub. A `ticket_state`, approval or event whose ticket no longer exists is an
-orphan: ignore it. The board blocks archiving and deleting while a ticket is Submitted, Investigating,
-Approved, Queued or Coding.
+orphan: ignore it. Archiving or deleting is allowed at any status: for a ticket Claude is working on, the
+orchestrator stops (interrupts) and archives its sessions first (Session cleanup).
 
 ## Comments the board sends to Claude
 Buttons post a comment and send it to Claude, which wakes the orchestrator. Texts (data, not commands):
 `Submit T-n: <title>` · `Resubmit T-n: answers added` · `Approve T-n (plan revision R)` ·
 `Changes for T-n (plan revision R): <text>` · `Continue T-n` · `Archive T-n: archive its sessions` ·
 `Delete T-n: archive its sessions` (sent just before the ticket is archived or deleted) ·
-`Refresh usage` (the usage bar's Refresh button; not tied to a ticket) · `Health check` (the Health panel's
+`Done T-n: mark it done` (drag to Done or Mark done) · `Refresh usage` (the usage bar's Refresh button; not tied to a ticket) · `Health check` (the Health panel's
 "Run a check now") · `Apply settings request from <name>` · `Restored T-a, T-b from the backup of <day>: re-read them` ·
 `Comment T-n: <first 300 characters>` (a comment posted with "Ask Claude to act on it"; read the full text
 on the board). Comments can come from any teammate, not only the owner.
 Approve, Changes and Continue buttons are shown to the owner and approvers only; still verify the author
-(and their role) when reading.
+(and their role) when reading. Dragging a card is the same as its button: Draft → With Claude = Submit (the author or the owner, submitters
+only), Plan ready → Coding = Approve plan (the owner and approvers), any column → Done = Mark done (the owner,
+approvers and admins), Needs info → With Claude = a reply "No more details for now: go ahead with reasonable
+assumptions and list them in the plan." then `Resubmit T-n` (the author or an approver), Paused → the column of
+the stage it stopped in = Continue (the owner and approvers). Ticking auto-approve on a ticket that is already `Plan ready` also sends
+`Approve T-n (plan revision R)`.
 
 ## Statuses
 | Status | Set by |
