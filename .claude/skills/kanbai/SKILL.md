@@ -5,7 +5,7 @@ description: KanbAI, an AI kanban board for Claude Code. Runs the orchestrator t
 
 # KanbAI
 
-Skill version: 0.1.13
+Skill version: 0.2.0
 
 Teammates submit tickets on a shared artifact board. One long-lived orchestrator session watches the
 board and starts, per ticket, a planning session and (after the owner or an approver approves) a coding
@@ -22,8 +22,8 @@ pipeline session starts on; it also holds the permission rules in `.claude/setti
 - `notes.md`: data sources, API conventions, UI text rules, what counts as a notable change, environments.
 - `screenshots.md`: how to capture UI screenshots (only when enabled).
 Find the company repo at `/home/user/<repo name>` (the folder holding `.claude/skills/kanbai/`). When
-this skill runs outside that repo (an organisation-skill copy in a plain chat), read `config.yml` next to
-this file instead. The file formats are in `company-files.md`.
+this skill runs outside that repo (a coding session runs on a product repo; or a plain chat), read the
+company files next to this file instead (the copy installed on the account, setup step 10a). The file formats are in `company-files.md`.
 
 Words used in these files:
 - `T-n` = a ticket id: the `ticket_prefix` from config, a dash, a number (e.g. `ACME-12`).
@@ -37,7 +37,7 @@ files named):
 | --- | --- | --- |
 | Orchestrator | The owner: `/kanbai orchestrator <board url>`, or a wake on the board | `board.md`, `orchestrator.md` (and `backup.md` for the daily backup or a restore); company `config.yml`, `repos.md` |
 | Planning session | The orchestrator: `/kanbai planning T-n …` | `board.md`, `planning.md`; company `config.yml`, `repos.md`, `notes.md` |
-| Coding session | The orchestrator: `/kanbai coding T-n …` | `board.md`, `coding.md`; company `config.yml`, `repos.md`, `notes.md` (and `screenshots.md` + company `screenshots.md` only when the ticket's `screenshots` is true, or the owner asks for screenshots in a comment) |
+| Coding session | The orchestrator: `/kanbai coding T-n` + `repo: <key>`, in a session started on that product repo | `board.md`, `coding.md`; company `config.yml`, `repos.md`, `notes.md` from the installed copy next to this file (and `screenshots.md` + company `screenshots.md` only when the ticket's `screenshots` is true, or the owner asks for screenshots in a comment) |
 | Review session | The orchestrator: `/kanbai review T-n …` (only when the ticket's `claude_review` is ticked) | `board.md`, `review.md`; company `repos.md`, `notes.md` |
 | Setup and repo commands | A person: `/kanbai setup`, `/kanbai add-repo`, `/kanbai remove-repo`, `/kanbai refresh-repos` | `setup.md`, `company-files.md`, `board.md` |
 | Ticket from a conversation | Anyone, in any Claude session: "create a ticket in the kanban from our discussion", `/kanbai ticket` | `board.md`, `chat-ticket.md`; company `config.yml` |

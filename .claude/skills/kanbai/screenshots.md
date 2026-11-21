@@ -26,10 +26,13 @@ tools. Crop or skip when unsure. Plus what the company `screenshots.md` lists.
 
 ## Where screenshots go (both)
 1. **The PR.** Commit the PNGs to `config.yml` `screenshots.branch` of `screenshots.repo` under
-   `T-n/<key>/<name>.png` (create the branch if missing; never touch another branch). Add a
+   `T-n/<key>/<name>.png` (create the branch if missing; never touch another branch) and add a
    `## Screenshots` section to the PR body (`update_pull_request` if the PR is already open): one line per
    image saying what it shows and the mode, e.g. `Dashboard greeting (real data)`, then
    `![alt](https://github.com/<screenshots.repo>/blob/<screenshots.branch>/T-n/<key>/name.png?raw=true)`.
+   A coding session runs on the product repo and may not be able to write `screenshots.repo`: if that write
+   is refused, do not retry; the `## Screenshots` section then lists the captions and says "Screenshots are
+   on the ticket in the KanbAI board (Code tab)".
 2. **The board** (shown in the ticket's Code tab). Upload each PNG to the board's asset store with the
    `Artifact` tool: `action: "publish"`, `url` = the board URL, `asset: true`, `file_path` (or `file_paths`
    for several). Then append to `ticket_state/T-n.screenshots` (read it first, pin `if_version`):

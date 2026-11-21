@@ -123,13 +123,16 @@ chosen logo files to the board's assets first, then `{logo_light, logo_dark, acc
 Publishing made this setup session watch the board: stop that watch right away (`ArtifactComments`
 `watch` with the board URL and `on: false`), so the board's comments wake only the orchestrator.
 
-### 10a. Chat skill (the one question asked in step 8)
-Who gets "create a ticket in the kanban from our discussion" in any Claude chat:
-"The whole organisation (Recommended)", "Only me" or "Not now". For either yes, first build a plugin folder
-in the scratchpad (never in the repo): `kanbai-chat/.claude-plugin/plugin.json` = `{"name": "kanbai",
-"version": "<skill version>", "description": "Create KanbAI tickets on the <company> board from any Claude
-chat."}`, and `kanbai-chat/skills/kanbai/` = every file of this skill folder plus `kanbai/config.yml`
-copied next to `SKILL.md` (the skill reads it there outside the repo). No other company file, no secret.
+### 10a. Installed skill (the one question asked in step 8)
+The pipeline needs the skill installed on the owner's account: coding sessions run on the product repos, not
+the company repo, and load `/kanbai` and the company files from that installed copy. It also gives everyone it
+is shared with "create a ticket in the kanban from our discussion" in any Claude chat. Ask who gets it:
+"The whole organisation (Recommended)" or "Only me" (the owner at least; no "Not now"). First build a plugin
+folder in the scratchpad (never in the repo): `kanbai-chat/.claude-plugin/plugin.json` = `{"name": "kanbai",
+"version": "<skill version>", "description": "KanbAI for the <company> board: ticket sessions and tickets from
+any Claude chat."}`, and `kanbai-chat/skills/kanbai/` = every file of this skill folder plus the four company
+files `kanbai/config.yml`, `repos.md`, `notes.md`, `screenshots.md` copied next to `SKILL.md` (the skill reads
+them there outside the company repo). No secret.
 - **Organisation**, when the `PublishPlugin` tool is available (load it with ToolSearch if it is only
   listed by name): `PublishPlugin` with `path` = that folder, `destination: "organization"`. The person
   approves the upload in the tool's own dialog; pass its result lines on as they are (an admin may have to
@@ -162,8 +165,9 @@ or ask me here and I update it (on the setup branch before the PR is merged, on 
    `forbidden_repos`): `/kanbai orchestrator <board url>` and, on the next line,
    `Attach with push access: <owner/name>, …`;
 4. teammates open the board once; tick approvers and admins in Permissions;
-5. if the chat skill was set up in step 10a: approve it in the organisation library if asked (organisation),
-   or upload the zip as a personal skill (only me); redo step 10a whenever `config.yml` or the skill changes;
+5. install the skill from step 10a (approve it in the organisation library if asked, or upload the zip as a
+   personal skill): coding sessions need it. Redo step 10a whenever a company file or the skill changes
+   (merging a company-file PR is not enough for coding sessions);
 6. first ticket: something small, with `dry_run: true` in `config.yml` if they want to see the code before
    any PR exists.
 Add after the list, once: when the orchestrator restarts it moves its scheduled checks; old ones it cannot
@@ -176,13 +180,15 @@ place in "Coding order"; new data sources to `notes.md`; when screenshots are on
 to `screenshots.md` (Which repos, plus its Real and Stubbed modes: reuse a fake backend or harness it has,
 else stub its API calls in Playwright with `page.route` and a fake login; try it once before writing it); its check commands and branch denies to
 `.claude/settings.json`; update `config/company.repos` on the board. Commit on a branch, push, give the PR
-link. No orchestrator restart is needed: sessions read the company files when they start.
+link. Then redo step 10a (coding sessions read the company files from the installed skill) and give the
+orchestrator restart message with the new repo in its `Attach with push access:` line.
 
 ## /kanbai remove-repo <key>
 Remove its section and its place in "Coding order", its branch denies and check commands (keep commands
 other repos use), and update `config/company.repos`. Tickets in progress that touch it keep their plan; say
-which ones. Open PRs in that repo are left alone. Branch, push, PR link.
+which ones. Open PRs in that repo are left alone. Branch, push, PR link, then redo step 10a.
 
 ## /kanbai refresh-repos
 Steps 4–6 for every repo in `repos.md`, then propose only the differences (new checks, moved folders, new
 services, changed default branches) as one PR. Never drop a line the person wrote by hand without asking.
+Redo step 10a once the PR is merged.
