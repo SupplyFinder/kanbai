@@ -96,28 +96,33 @@ Work out why you were woken, handle that, then ALWAYS finish with a reconcile pa
 ## Reconcile pass
 Read `config/models`, then all `tickets` and `ticket_state` documents. Skip archived tickets
 (`archived_at` set) and orphan state (no matching ticket). For each remaining ticket, apply the FIRST
-rule that matches:
+rule that matches. An **open blocker** of T-n is another ticket whose `links` has `{type: "blocks", id: "T-n"}`
+and that is not Done or archived.
 
 0. **Marked done**: `done_requested_at` is set and status is not `Done` → mark-done rule (below).
 1. **Submitted, no state yet** (`submitted_at` set, no `ticket_state`): if its author is not the owner and
    `config/roles` says `submitter: false`, create `ticket_state` with status `AI paused – needs decision`,
    `note` "Submitted by someone without submitter access. The owner: tick Submitter for them in Permissions,
-   or click Continue to plan it anyway.", open its Slack thread, mention the owner, and stop. Otherwise create
-   `ticket_state` with status `Investigating`, open its Slack thread, start a planning session.
+   or click Continue to plan it anyway.", open its Slack thread, mention the owner, and stop. If it has an open
+   blocker, create `ticket_state` with status `Submitted`, `note` "Waiting for T-x, which blocks this ticket:
+   planning starts when it is Done.", open its Slack thread, and stop: planning against code the blocker has
+   not merged yet would redesign or guess its work. Otherwise create `ticket_state` with status
+   `Investigating`, open its Slack thread, start a planning session.
    (Continue on such a ticket = start its planning session.)
+1a. **Submitted, waiting for a blocker** (`ticket_state` status `Submitted`), no open blocker left → status
+   `Investigating`, remove `note`, Slack line "Unblocked: planning started.", start a planning session.
 2. **Needs info, answered**: replies newer than `questions_at` exist → status `Investigating`, then
    `send_message` to `plan_session_id`: `T-n: the author answered. Read the new replies on the board.`
    If that session is archived or failed, start a new planning session instead.
 3. **Plan ready, approved**: a valid approval exists (see Approval check) →
-   if another ticket `blocks` this one (its `links` has `{type: "blocks", id: "T-n"}`) and that ticket is not
-   Done or archived → status `Queued`, `note` "Waiting for T-x, which blocks this ticket." (Slack line once).
+   if it has an open blocker → status `Queued`, `note` "Waiting for T-x, which blocks this ticket." (Slack line once).
    Else if fewer than `max_parallel_coding` tickets are `Coding`, start a coding session; else status `Queued`.
 4. **Queued**, no open blocker, and a coding slot is free (oldest approval first) → start a coding session.
 4a. **Waiting – usage limit** and usage is now under the limit (oldest `status_at` first) → start the
     `waiting_stage` session (coding still respects `max_parallel_coding`: else `Queued`); clear `waiting_stage`.
 5. **Investigating, Coding or Reviewing past `deadline_at`** → time-cap rule.
 5a. (Daily reconcile only) comments with `to_claude: true`, no `handled_at` and no `needs_details_at`, older
-    than 1 hour → comment routing rule (a wake may have been missed). Comments waiting on details for more
+    than 1 hour, on a ticket not waiting for a blocker → comment routing rule (a wake may have been missed). Comments waiting on details for more
     than 2 days → one reminder @mention to their author in Slack (note the reminder in an event; only once).
 5b. (Daily reconcile only) sessions titled `T-n planning`/`T-n coding …`/`T-n review` whose ticket is archived or gone,
     and are not archived → session cleanup rule.
@@ -142,6 +147,9 @@ allowed and say so in the thread.
 Read `tickets/T-n/comments` and take those with `to_claude: true` and no `handled_at`, oldest first.
 Route them all in one message, depending on the ticket's status:
 - **Draft** → reply on the board: "Submit the ticket first, then Claude picks this up." Mark handled.
+- **Submitted, waiting for a blocker** (rule 1a not met yet) → reply on the board once: "This ticket waits
+  for T-x. Planning starts when it is Done and reads your comment then." Leave the comment unhandled; the
+  1-hour re-routing in rule 5a skips these tickets while they wait.
 - **Submitted, Investigating, Needs info, Plan ready** → `send_message` to `plan_session_id`:
   `T-n: new comments on the board (ids …). Read them, act per planning.md "Comments".` If that session is
   archived or failed, start a new planning session. Status `Investigating` if it was `Plan ready`.

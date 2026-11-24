@@ -12,6 +12,8 @@ Company files: `config.yml`, `repos.md`, `notes.md` (see SKILL.md).
 - Attachments (screenshots, PDFs, CSV, text…): for each, `Artifact` `read` with the board URL and `path` = its
   id, then Read the saved file. Never ask what an attachment already shows or says.
 - Replies answer your earlier questions: use them, never ask again what is answered.
+- Comments with `to_claude: true` and no `handled_at` (left while the ticket waited for a blocker):
+  handle them per "Comments" below.
 
 ## 2. Investigate
 - Attach the repos in `repos.md` read-only (`add_repo`, clone, `register_repo_root`, one at a time); read
@@ -20,6 +22,13 @@ Company files: `config.yml`, `repos.md`, `notes.md` (see SKILL.md).
   `git checkout -B <target> FETCH_HEAD`): the clone lands on the default branch, often the release branch,
   which lacks work merged since the last release (a blocking ticket's, for one). Plan against what coding
   will build on.
+- Blockers: every ticket whose `links` has `{type: "blocks", id: "T-n"}`. Read each one's ticket, `brief`,
+  final `plan` and merged PRs (`prs`, their diffs). Build on what they built: reuse their functions,
+  endpoints and fields; never redesign or redo their work. Your ticket was often written before its
+  blocker was built: where it describes the blocker's work differently from the merged code (a name, a
+  field, a step dropped), follow the code and list each difference in the brief under "Differences with
+  T-x as built". Ask the author only when a difference changes what this ticket delivers. Never edit the
+  blocker. `related` and `duplicate_of` links are context only, not a basis for the plan.
 - Find what exists: the screen or feature the ticket names, current behaviour, whether it already
   exists (fully or partly). Targeted Grep/Read only.
 - Check real data names and shapes with the data sources in `notes.md` that are connected (small queries).
