@@ -16,6 +16,10 @@ Company files: `config.yml`, `repos.md`, `notes.md` (see SKILL.md).
 ## 2. Investigate
 - Attach the repos in `repos.md` read-only (`add_repo`, clone, `register_repo_root`, one at a time); read
   each `AGENTS.md` you rely on.
+- In each clone, check out the repo's PR target (`git fetch --depth 1 origin <target>` then
+  `git checkout -B <target> FETCH_HEAD`): the clone lands on the default branch, often the release branch,
+  which lacks work merged since the last release (a blocking ticket's, for one). Plan against what coding
+  will build on.
 - Find what exists: the screen or feature the ticket names, current behaviour, whether it already
   exists (fully or partly). Targeted Grep/Read only.
 - Check real data names and shapes with the data sources in `notes.md` that are connected (small queries).

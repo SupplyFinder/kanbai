@@ -25,7 +25,8 @@ message the orchestrator `T-n: no valid approval, stopped.` and end.
   its commits (`git log --oneline origin/<target>..HEAD`); otherwise create `<branch>` from a freshly fetched
   `origin/<target>`.
 - A repo your `repos.md` section lists under "Depends on" (the API a UI calls): attach it read-only
-  (`add_repo`, clone, `register_repo_root`) to read the routes and schemas the plan's Contract names. If
+  (`add_repo`, clone, `register_repo_root`), check out its PR target the same way as planning.md step 2,
+  and read the routes and schemas the plan's Contract names. If
   that attach is refused, do not retry: work from the plan's Contract and the API PR already in `prs` (its
   diff), and say so in your PR.
 - Install what the checks need (the repo's README/AGENTS.md says how).

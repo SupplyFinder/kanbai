@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Planning reads the PR target branch (0.2.1). A planning session's clone landed on the repo's default
+  branch, often the release branch, so a ticket planned after its blocker was merged still planned against
+  code without the blocker's work. Planning now checks out each repo's PR target after cloning, and a coding
+  session does the same for a read-only "Depends on" repo.
 - Coding sessions start on the product repo (0.2.0). Attaching a repo with push access from a session
   started on the company repo is decided by a permission check that refused it again and again. The
   orchestrator now starts one coding session per repo in scope, on that repo (`source_url`, `outcome_branch`
