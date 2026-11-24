@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 (2026-11-24)
 
 - Blocking tickets are honoured from planning on (0.2.2). A submitted ticket with an open blocker now waits
   (status `Submitted`, with a note shown on the ticket) and is planned only once the blocker is Done, instead
