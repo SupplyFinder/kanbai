@@ -21,6 +21,8 @@ message the orchestrator `T-n: no valid approval, stopped.` and end.
 
 ## 2. Prepare
 - Read `plan`, `brief`, `scope`, `branch`, `prs`, and the ticket's attachments (see planning.md step 1).
+- Blockers (planning.md step 2): read their `plan` and merged PRs for context only. Your scope is your own
+  plan; anything that looks like the blocker's unfinished work is a question, not something to build.
 - Your repo is the session's working directory. If `origin/<branch>` exists, check it out and continue from
   its commits (`git log --oneline origin/<target>..HEAD`); otherwise create `<branch>` from a freshly fetched
   `origin/<target>`.

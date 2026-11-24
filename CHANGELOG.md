@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Blocking tickets are honoured from planning on (0.2.2). A submitted ticket with an open blocker now waits
+  (status `Submitted`, with a note shown on the ticket) and is planned only once the blocker is Done, instead
+  of being planned against code the blocker had not merged yet. Planning reads each blocker's ticket, brief,
+  plan and merged PRs, builds on them, and lists in the brief where its ticket describes the blocker's work
+  differently from the merged code (following the code; asking only when it changes the outcome). Coding
+  reads the blockers' plans and PRs for context only. The board shows the waiting note on `Submitted` and
+  `Queued` tickets.
 - Planning reads the PR target branch (0.2.1). A planning session's clone landed on the repo's default
   branch, often the release branch, so a ticket planned after its blocker was merged still planned against
   code without the blocker's work. Planning now checks out each repo's PR target after cloning, and a coding

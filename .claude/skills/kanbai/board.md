@@ -184,7 +184,7 @@ the stage it stopped in = Continue (the owner and approvers). Ticking auto-appro
 ## Statuses
 | Status | Set by |
 | --- | --- |
-| `Draft`, `Submitted` | the author (via the ticket document) |
+| `Draft`, `Submitted` | the author (via the ticket document); the AI also writes `Submitted`, with a `note`, while planning waits for a blocking ticket |
 | `Investigating`, `Needs info`, `Plan ready` | AI |
 | `Approved` | derived: a valid `approvals/{T-n}` exists |
 | `Queued` | AI: approved, waiting for a coding slot |
