@@ -5,7 +5,7 @@ description: KanbAI, an AI kanban board for Claude Code. Runs the orchestrator t
 
 # KanbAI
 
-Skill version: 0.2.0
+Skill version: 0.2.1
 
 Teammates submit tickets on a shared artifact board. One long-lived orchestrator session watches the
 board and starts, per ticket, a planning session and (after the owner or an approver approves) a coding
