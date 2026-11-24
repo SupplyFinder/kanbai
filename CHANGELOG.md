@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Existing tests a ticket changes are approved with the plan (0.2.3). Coding was forbidden to touch any test,
+  so a ticket that deliberately changes behaviour (permissions, for instance) left the suite red, and a
+  comment asking to fix the tests was rightly not enough approval. Plans now list "Existing tests to update"
+  under Notable changes (file and assertion), approving the plan approves exactly those edits, and coding may
+  change only those. When coding finds another failing test that asserts the changed behaviour, it stops and
+  reports `T-n: tests to update for <key>: …`; the orchestrator sends it back to planning for a new plan
+  revision, and coding continues on the same branch once it is approved. New tests still need the ticket to
+  ask for them.
+
 ## 0.2.2 (2026-11-24)
 
 - Blocking tickets are honoured from planning on (0.2.2). A submitted ticket with an open blocker now waits

@@ -69,6 +69,11 @@ exists, assumptions you made.
 4. **Notable changes** — anything risky the approver accepts by approving the plan: new dependency,
    breaking API change (and the UI follow-up), a job that rewrites or deletes data, new environment
    variable, config or workflow files, permission changes, plus what `notes.md` lists. "None" if none.
+   Include **Existing tests to update**: when the change alters behaviour an existing test asserts (Grep the
+   repo's tests for the functions, endpoints, fields and rules the plan changes), one line per test file:
+   `path` — the assertion that changes and why (the old behaviour is what this ticket removes). Approving the
+   plan approves exactly these edits; coding may not change any other test. No new tests unless the ticket
+   asks for them.
 5. **Deploy order** — when a UI depends on its API: the API PR merges and deploys first.
 6. **Risks**.
 
@@ -83,6 +88,10 @@ Write: previous `plan` (if any) appended to `plan_history`; `plan_rev` + 1; stat
 ## 5. Revisions
 If woken with a change request from the owner or an approver, start from the current plan, apply every
 requested change, and write it as a new revision (step 4). On a re-plan, the Summary says what changed.
+If woken because coding found existing tests that fail on the approved behaviour, check each one against the
+code and add the ones that really assert behaviour this ticket changes to "Existing tests to update"; a test
+that fails for another reason is a bug in the change, not a test to edit: say so in the Summary. Write a new
+revision (step 4): it needs approval like any other.
 
 ## Comments
 When woken about board comments: read them (`tickets/T-n/comments`, the ids given). Any teammate may
