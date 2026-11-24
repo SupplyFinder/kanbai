@@ -749,7 +749,7 @@
   // Shown text for a status, when it differs from the status name.
   const STATUS_LABEL = { Approved: 'Approved, coding starts' };
   const statusPill = (status, id) => h('span', { class: 'pill ' + (TONE[status] || '') }, STATUS_LABEL[status] || status,
-    RUNNING.includes(status) && !(id && unsent(id)) ? h('span', { class: 'dots', role: 'img', 'aria-label': 'Claude is working' }, h('i'), h('i'), h('i')) : null);
+    RUNNING.includes(status) && !(id && unsent(id)) && !(status === 'Submitted' && id && (state.st.get(id) || {}).note) ? h('span', { class: 'dots', role: 'img', 'aria-label': 'Claude is working' }, h('i'), h('i'), h('i')) : null);
   // An approval counts when the owner's approvals/<id> matches the plan revision, or when someone ticked
   // as Approver (or the owner) voted for this revision under approval_votes/<their id>, a path only they
   // can write. The orchestrator checks the same thing before coding.
@@ -1610,6 +1610,9 @@
 
     if (s.note && (PAUSED.includes(status) || status === 'Needs info')) {
       body.append(h('div', { class: 'callout bad' }, md(s.note)));
+    }
+    if (s.note && (status === 'Submitted' || status === 'Queued')) {
+      body.append(h('div', { class: 'callout warn' }, md(s.note)));
     }
     if (status === WAIT) {
       body.append(h('div', { class: 'callout warn' }, md(s.note || 'Waiting: account usage is above the limit set in Settings. Claude starts this ticket automatically when usage drops.')));
