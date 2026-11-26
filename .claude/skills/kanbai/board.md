@@ -27,7 +27,7 @@ moment you write, never rounded, estimated or copied from another field.
 | `source` | `chat` or missing | `chat` = created from a Claude conversation (chat-ticket.md) |
 | `attachments` | array | files the author uploaded: `{id, name, type}` (older tickets: a bare asset id string, always an image). Fetch each with the `Artifact` tool `read`, `url` = board, `path` = the id; then Read the saved file (images, PDF, CSV, text, Markdown, JSON) |
 | `created_at` / `submitted_at` | ISO string | `submitted_at` empty = Draft |
-| `updated_at` / `updated_by` | ISO string / user id | last change made on the board (self-declared: see `logs/`) |
+| `updated_at` / `updated_by` | ISO string / user id | last change made on the board (self-declared: see `logs/`); `updated_by` is `"claude"` when the orchestrator appended a note (orchestrator.md, "Notes for other tickets"), proved by an `edited` event |
 | `links` | `{type, id}[]` | `type` `blocks` \| `duplicate_of` \| `related`; the other ticket shows the reverse ("Blocked by") |
 | `dismissed_links` | string[] | `"type:id"` of Claude's suggestions the author dismissed |
 | `restored_at` / `restored_from` | ISO string / text | set when restored from a backup on the Backups page |
@@ -80,7 +80,7 @@ with `needs_details_at` (the board then shows "Claude needs details"), and answe
 
 ### `events/{auto id}` — owner-only log
 `{ ticket, at, kind, text }`; kinds: `submitted`, `questions`, `answered`, `plan`, `approved`,
-`coding`, `pr`, `paused`, `failed`, `done`.
+`coding`, `pr`, `paused`, `failed`, `done`, `edited` (a note appended to the ticket's description).
 
 ### `approvals/{T-n}` — owner-only, written by the owner's Approve click
 `{ approved_by, at, plan_rev }`. Valid if `plan_rev` equals `ticket_state.plan_rev`.

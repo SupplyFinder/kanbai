@@ -100,6 +100,13 @@ changes what should be built (new plan revision, back to `Plan ready`; it still 
 comment, add a reply comment (`from_claude: true`, `reply_to`) saying what you did, and `update` it with
 `handled_at`. Then message the orchestrator `T-n: comments handled.`
 
+### A note for another ticket
+When the owner or an admin asks you (in a comment) to update other tickets, or to put something on another
+ticket, never write that ticket yourself. Read it, decide whether it needs a note, and if so send the
+orchestrator `T-n: note for T-x (comment <id>): <text>`: plain words, standing on its own, at most 1500
+characters, no secrets or customer data. The orchestrator appends it to T-x's description (only while T-x
+has no plan) and records it in T-x's History. Say so in your reply on the board.
+
 ### Unclear comments
 If you cannot act on a comment without guessing (what to change, where, or what "done" looks like), do not
 guess. Reply on the board with "I need these details:" and 1–3 short numbered questions in plain words,
