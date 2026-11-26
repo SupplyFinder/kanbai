@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Claude can add a note to another ticket (0.2.4). When the work on one ticket showed that another needed a
+  note, the orchestrator had no allowed way to write it: ticket text was off limits, and an edit without a
+  change-log entry is flagged by the daily check. Now, when the owner or an admin asks for it in a comment, the
+  ticket's session drafts the note and the orchestrator appends it to the other ticket's description (only
+  while that ticket has no plan; never rewriting existing text), with `updated_by: "claude"` and an `edited`
+  event that shows in its History and passes the change-log check. A ticket that already has a plan is left
+  alone and the owner is asked to add the note with Edit, which sends it to planning.
 - Existing tests a ticket changes are approved with the plan (0.2.3). Coding was forbidden to touch any test,
   so a ticket that deliberately changes behaviour (permissions, for instance) left the suite red, and a
   comment asking to fix the tests was rightly not enough approval. Plans now list "Existing tests to update"
